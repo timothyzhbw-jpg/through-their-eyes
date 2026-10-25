@@ -14,7 +14,8 @@ import lookJson from "../../public/data/look_seed3.json";
 import whatIfJson from "../../public/data/whatif_seed3.json";
 import { App } from "../App";
 import { parseHero } from "../data/hero";
-import { parseDeepLink } from "../deeplink";
+import { doorOf, parseDeepLink } from "../deeplink";
+import { doors } from "../doors/state";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
 import type { Fetch } from "../takeeyes/controller";
@@ -22,6 +23,7 @@ import { settle } from "../testing";
 import { drillOf, type Drill } from "./controller";
 import { DrillStage } from "./Drill";
 import { SCAN_MAX_DEG, SCAN_MIN_DEG } from "./snap";
+import { COACH_LABEL } from "../steps/coach";
 
 vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
@@ -111,6 +113,15 @@ describe("Academy drill: ready", () => {
     expect(how.open).toBe(false);
     expect(textOf(how.querySelector("summary"))).toBe("How the drill works");
     expect(textOf(how)).toContain(`${SCAN_MIN_DEG}–${SCAN_MAX_DEG}°`);
+  });
+
+  it("links to the coach's example in its intro when the live service is there", async () => {
+    const { el } = await opened();
+    expect(el.querySelector('a[href*="pro_scan"]')).toBeNull(); // offline: it cannot play
+    const live = (await opened({ ...offline(), offline: null })).el;
+    const link = live.querySelector<HTMLAnchorElement>('.dr-card a[href*="pro_scan"]')!;
+    expect(textOf(link)).toBe(COACH_LABEL);
+    expect(link.getAttribute("href")).toBe("/?play=steps&match=pro_scan-116");
   });
 
   it("chooses the pace before the start", async () => {
@@ -203,38 +214,30 @@ describe("Academy drill: the look, the call, the result", () => {
 });
 
 describe("Academy drill: in the app", () => {
-  it("takes the live screen's place from the moment's button; Escape returns focus to it", async () => {
+  it("takes the page's place from Your turn's card; Escape returns focus to the card", async () => {
+    act(() => doors.set({ door: "turn", seq: 0 }));
     const session = offline();
     const d = drillOf(session, served, "/data/");
     const page = mount(session, <App autoplay={false} />);
-    const live = () => page.querySelector('section.stage[aria-label="Live screen"]');
+    const hub = () => page.querySelector("section.door-turn");
     const screen = () => page.querySelector('section.dr-screen[aria-label="Academy drill"]')!;
-    // The moment's button, in its "More ways in" fold: the fold is opened and the button focused.
-    click(page.querySelector<HTMLButtonElement>("#drill-story")!);
+    const card = () => page.querySelector<HTMLButtonElement>("#turn-drill")!;
+    expect(card().textContent).toContain("Train your scanning");
+    click(card());
     await act(settle);
     expect(d.state.get().step).toBe("ready");
-    expect(live()).toBeNull();
+    expect(hub()).toBeNull();
     expect(page.querySelector("main.moment")).toBeNull();
-    expect(page.querySelector(".moment-rail")).toBeNull();
     key(screen().querySelector(".dr-card")!, "keydown", "Escape");
     expect(d.state.get().step).toBe("closed");
-    expect(live()).not.toBeNull();
-    const story = page.querySelector<HTMLButtonElement>("#drill-story")!;
-    expect(document.activeElement).toBe(story);
-    expect(story.closest("details")!.open).toBe(true);
-
-    // The header's More item: More shut behind the drill, so focus goes to the More button.
-    click(page.querySelector<HTMLButtonElement>("#header-more")!);
-    click(page.querySelector<HTMLButtonElement>("#drill-open")!);
-    await act(settle);
-    expect(live()).toBeNull();
-    key(screen().querySelector(".dr-card")!, "keydown", "Escape");
-    expect(live()).not.toBeNull();
-    expect(document.activeElement).toBe(page.querySelector("#header-more"));
+    expect(hub()).not.toBeNull();
+    expect(document.activeElement).toBe(card());
+    act(() => doors.set({ door: "look", seq: 0 }));
   });
 
-  it("opens from its deep link, which skips the intro card", () => {
+  it("opens from its deep link, which skips the intro card, on Your turn", () => {
     expect(parseDeepLink("?play=drill")).toMatchObject({ play: "drill", intro: false });
+    expect(doorOf(parseDeepLink("?play=drill")).door).toBe("turn");
     expect(parseDeepLink("?match=press_escape-0&play=drill").play).toBe("drill");
   });
 });

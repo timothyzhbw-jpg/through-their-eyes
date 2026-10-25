@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
-// The journey (SPEC 7): five steps in order, moved by arrow keys and opened by ?step=; each step
-// opens its panel for the moment on screen; the demo-data badge is one string wherever audience or
-// sponsor figures appear, and the Value step separates them from match facts; the Full story walks
-// the five steps in about ninety seconds.
+// The studios' journey (SPEC 7, door 3): four steps in order, each ending on the next, moved by
+// arrow keys and opened by ?step=; each step opens its panel for the moment on screen; the
+// demo-data badge is one string wherever audience or sponsor figures appear, and the Value step
+// separates them from match facts; the studios' walk opens the four steps in about a minute. Door
+// 1's compare (the old Event step) tells both runs from their verified lines.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -13,7 +14,7 @@ import raw from "../../public/data/hero_seed3.json";
 import goalRaw from "../../public/data/without_look_far_post_finish_seed11.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import { parseHero } from "../data/hero";
-import { parseDeepLink } from "../deeplink";
+import { doorOf, parseDeepLink } from "../deeplink";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext } from "../session";
 import { DEMO_DATA as STADIUM_DEMO, STUDIO_FILES } from "../stadium/StudioApp";
@@ -24,7 +25,7 @@ import { closeTour, startTour } from "../tour/tourState";
 import { Tour } from "../tour/Tour";
 import { withoutLookOf } from "../without/without";
 import { DEMO_DATA, FACTS_VS_FIGURES } from "./DemoBadge";
-import { Journey } from "./Journey";
+import { ComparePanel, Journey } from "./Journey";
 import { journey } from "./state";
 import { eventIndex, STADIUM_MOMENTS, stadiumEventFor } from "./stadium";
 import {
@@ -42,48 +43,67 @@ import {
 const hero = parseHero(raw);
 
 describe("the steps", () => {
-  it("are Event, Tactics, Your view, Content, Value, in that order", () => {
+  it("are Tactics, Content, Value, Behind the scenes, in that order", () => {
     expect(JOURNEY_STEPS.map((s) => STEP_LABEL[s])).toEqual([
-      "Event",
       "Tactics",
-      "Your view",
       "Content",
       "Value",
+      "Behind the scenes",
     ]);
   });
 
   it("move with the arrow keys, Home and End, held at the ends", () => {
-    expect(stepForKey("event", "ArrowRight")).toBe("tactics");
-    expect(stepForKey("tactics", "ArrowLeft")).toBe("event");
-    expect(stepForKey("event", "ArrowLeft")).toBe("event");
-    expect(stepForKey("value", "ArrowRight")).toBe("value");
-    expect(stepForKey("content", "Home")).toBe("event");
-    expect(stepForKey("event", "End")).toBe("value");
-    expect(stepForKey("event", "Enter")).toBeNull();
-    expect(moveStep("tactics", 2)).toBe("content");
+    expect(stepForKey("tactics", "ArrowRight")).toBe("content");
+    expect(stepForKey("content", "ArrowLeft")).toBe("tactics");
+    expect(stepForKey("tactics", "ArrowLeft")).toBe("tactics");
+    expect(stepForKey("crew", "ArrowRight")).toBe("crew");
+    expect(stepForKey("value", "Home")).toBe("tactics");
+    expect(stepForKey("tactics", "End")).toBe("crew");
+    expect(stepForKey("tactics", "Enter")).toBeNull();
+    expect(moveStep("tactics", 2)).toBe("value");
   });
 
   it("parse only their own ids", () => {
     for (const s of JOURNEY_STEPS) expect(parseStep(s)).toBe(s);
     expect(parseStep("Value")).toBeNull();
+    expect(parseStep("event")).toBeNull();
     expect(parseStep(null)).toBeNull();
   });
 
-  it("write ?step= and keep every other parameter", () => {
+  it("write ?door=studios&step= and keep every other parameter", () => {
     expect(withStep("?match=match-1&moment=far_post_finish", "value")).toBe(
-      "?match=match-1&moment=far_post_finish&step=value",
+      "?match=match-1&moment=far_post_finish&door=studios&step=value",
     );
-    expect(withStep("?step=event&intro=0", "content")).toBe("?step=content&intro=0");
+    expect(withStep("?step=tactics&intro=0", "content")).toBe("?step=content&intro=0&door=studios");
   });
 });
 
 describe("deep links", () => {
-  it("?step=<id> opens that step, with no intro card and no autoplay", () => {
+  it("?step=<id> opens that step on For studios, with no intro card and no autoplay", () => {
     const link = parseDeepLink("?step=tactics");
     expect(link.step).toBe("tactics");
+    expect(doorOf(link)).toEqual({ door: "studios", studio: "tactics", yourView: false });
     expect(link.intro).toBe(false);
     expect(link.autoplay).toBe(false);
     expect(link.warnings).toEqual([]);
+    expect(doorOf(parseDeepLink("?step=crew")).studio).toBe("crew");
+  });
+
+  it("maps the old steps onto the doors: Event is the look, Your view is in Settings", () => {
+    expect(doorOf(parseDeepLink("?step=event"))).toEqual({
+      door: "look",
+      studio: null,
+      yourView: false,
+    });
+    expect(doorOf(parseDeepLink("?step=your-view"))).toEqual({
+      door: "look",
+      studio: null,
+      yourView: true,
+    });
+    for (const s of ["content", "value"]) {
+      expect(doorOf(parseDeepLink(`?step=${s}`)).door).toBe("studios");
+    }
+    expect(parseDeepLink("?step=event").warnings).toEqual([]);
   });
 
   it("ignores and logs an unknown step", () => {
@@ -93,19 +113,19 @@ describe("deep links", () => {
     expect(link.intro).toBe(true);
   });
 
-  it("?tour=story starts the Full story at its first step, or at the step named", () => {
+  it("?tour=story starts the studios' walk at its first step, or at the step named", () => {
     expect(parseDeepLink("?tour=story").tour).toBe(STORY_IDS[0]);
     expect(parseDeepLink("?tour=story-value").tour).toBe("story-value");
   });
 });
 
-describe("the Full story", () => {
-  it("walks the five steps in order and lasts about ninety seconds", () => {
+describe("the studios' walk", () => {
+  it("opens the four steps in order and lasts about a minute", () => {
     const opened = STORY_STEPS.map((s) => s.journey);
     expect([...new Set(opened)]).toEqual([...JOURNEY_STEPS]);
     const total = secondsOf("story");
-    expect(total).toBeGreaterThanOrEqual(80);
-    expect(total).toBeLessThanOrEqual(100);
+    expect(total).toBeGreaterThanOrEqual(50);
+    expect(total).toBeLessThanOrEqual(75);
   });
 
   it("is a tour of its own, its ids apart from the other two", () => {
@@ -176,7 +196,7 @@ beforeAll(() => {
   });
 });
 beforeEach(() => {
-  journey.set({ step: "event", seq: 0 });
+  journey.set({ step: "tactics", seq: 0 });
   window.history.replaceState(null, "", "/");
 });
 afterEach(() => {
@@ -210,37 +230,47 @@ async function shown(c: HTMLElement, selector: string) {
 }
 
 describe("the bar and its panels", () => {
-  it("shows the five steps as tabs, Event open, and its with / without comparison", () => {
+  it("shows the four steps as tabs, Tactics open, each ending on the next", () => {
     const { container } = mount();
     expect(tabs(container).map((t) => t.textContent)).toEqual([
-      "1Event",
-      "2Tactics",
-      "3Your view",
-      "4Content",
-      "5Value",
+      "1Tactics",
+      "2Content",
+      "3Value",
+      "4Behind the scenes",
     ]);
-    expect(selected(container)).toBe("1Event");
-    expect(panel(container).dataset.step).toBe("event");
-    expect(panel(container).getAttribute("aria-labelledby")).toBe("journey-tab-event");
-    const text = panel(container).textContent!;
+    expect(selected(container)).toBe("1Tactics");
+    expect(panel(container).dataset.step).toBe("tactics");
+    expect(panel(container).getAttribute("aria-labelledby")).toBe("journey-tab-tactics");
+    expect(panel(container).querySelector("#tactics-lab")).not.toBeNull();
+    // Only the open tab is in the Tab order.
+    expect(tabs(container).map((t) => t.tabIndex)).toEqual([0, -1, -1, -1]);
+    // The bar's name says where it goes; no kicker repeats it on screen.
+    const bar = container.querySelector("nav.journey-bar")!;
+    expect(bar.getAttribute("aria-label")).toBe("For studios, from tactics to the crew");
+    expect(bar.textContent).not.toMatch(/from tactics to the crew/i);
+    // One action under the panel: the next step, which takes the keyboard to its tab.
+    const next = panel(container).querySelector<HTMLButtonElement>(".journey-next .btn-primary")!;
+    expect(next.textContent).toBe("Next: Content");
+    act(() => next.click());
+    expect(panel(container).dataset.step).toBe("content");
+    expect(document.activeElement?.id).toBe("journey-tab-content");
+    expect(window.location.search).toBe("?door=studios&step=content");
+  });
+
+  it("door 1's compare tells both sides from the bundled verified lines, with no breakdown asked for", async () => {
+    const { container, session } = mount(<ComparePanel />);
+    await act(() => withoutLookOf(session, undefined, "/data/").load());
+    const text = container.textContent!;
     expect(text).toContain("With the look");
     expect(text).toContain("Without the look");
     expect(text).toContain("Compare from above");
-    // Only the open tab is in the Tab order.
-    expect(tabs(container).map((t) => t.tabIndex)).toEqual([0, -1, -1, -1, -1]);
-    // The bar's name says where it goes; no kicker repeats it on screen.
-    const bar = container.querySelector("nav.journey-bar")!;
-    expect(bar.getAttribute("aria-label")).toBe("This moment, from event to value");
-    expect(bar.textContent).not.toMatch(/from event to value/i);
-  });
-
-  it("Event tells both sides from the bundled verified lines, with no breakdown asked for", async () => {
-    const { container, session } = mount();
-    await act(() => withoutLookOf(session, undefined, "/data/").load());
-    const [withLook, without] = [...panel(container).querySelectorAll(".journey-compare .tile")];
+    expect(text).toContain("Step through his looks");
+    const [withLook, without] = [...container.querySelectorAll(".journey-compare .tile")];
     expect(withLook.textContent).toContain("Removed: J. Ferriday's look over his right shoulder");
     expect(without.textContent).toContain("Without that look, J. Ferriday would have played it");
     expect(session.breakdown.get().status).not.toBe("loading");
+    // One primary action per screen: door 1's is "Watch the look" above it, not here.
+    expect(container.querySelector(".btn-primary")).toBeNull();
   });
 
   it("moves with the arrow keys and writes the step into the address", () => {
@@ -252,23 +282,27 @@ describe("the bar and its panels", () => {
           .dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
       });
     key("ArrowRight");
-    expect(selected(container)).toBe("2Tactics");
-    expect(panel(container).querySelector("#tactics-lab")).not.toBeNull();
-    expect(document.activeElement?.id).toBe("journey-tab-tactics");
-    expect(window.location.search).toBe("?step=tactics");
+    expect(selected(container)).toBe("2Content");
+    expect(document.activeElement?.id).toBe("journey-tab-content");
+    expect(window.location.search).toBe("?door=studios&step=content");
     key("End");
-    expect(panel(container).dataset.step).toBe("value");
+    expect(panel(container).dataset.step).toBe("crew");
     key("Home");
-    expect(panel(container).dataset.step).toBe("event");
+    expect(panel(container).dataset.step).toBe("tactics");
   });
 
-  it("Your view has the audience, language and follow choices inline", () => {
+  it("Behind the scenes is the crew's breakdown with its failure drill, and the evidence one click away", () => {
     const { container } = mount();
-    openAt(container, "your-view");
+    openAt(container, "crew");
     const p = panel(container);
-    expect(p.querySelector(".your-view-inline")).not.toBeNull();
-    expect(p.textContent).toContain("Follow");
-    expect(p.textContent).toContain("Language");
+    expect(p.querySelector("section.breakdown")).not.toBeNull();
+    expect(p.textContent).toContain("Step 4 of 4 · Behind the scenes: the AI crew");
+    expect([...p.querySelectorAll("button")].map((b) => b.textContent)).toContain(
+      "Open the evidence",
+    );
+    // The last step ends the door: no next step.
+    expect(p.querySelector(".journey-next")).toBeNull();
+    expect(p.querySelector(".journey-end")?.textContent).toContain("That's the studio side");
   });
 
   it("Content has the package and the stadium's screens for this moment", async () => {
@@ -323,28 +357,22 @@ describe("the bar and its panels", () => {
     act(() => {
       next.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     });
-    expect(panel(container).dataset.step).toBe("event");
+    expect(panel(container).dataset.step).toBe("tactics");
     expect(window.location.search).toBe("");
   });
 
   it("a phone's stepper says where it is and moves on", () => {
     const { container } = mount();
     const stepper = container.querySelector<HTMLElement>(".journey-stepper")!;
-    expect(stepper.textContent).toContain("Step 1 of 5");
+    expect(stepper.textContent).toContain("Step 1 of 4");
     const next = [...stepper.querySelectorAll("button")].find((b) => b.textContent === "Next")!;
-    expect(next.getAttribute("aria-label")).toBe("Next: Tactics");
+    expect(next.getAttribute("aria-label")).toBe("Next: Content");
     act(() => next.click());
-    expect(stepper.textContent).toContain("Step 2 of 5");
-    expect(panel(container).dataset.step).toBe("tactics");
+    expect(stepper.textContent).toContain("Step 2 of 4");
+    expect(panel(container).dataset.step).toBe("content");
   });
 
-  it("offers the Full story beside the steps", () => {
-    const { container } = mount();
-    const story = container.querySelector(".journey-story");
-    expect(story?.textContent).toBe(`Full story · ${secondsOf("story")} s`);
-  });
-
-  it("the Full story opens each step's panel as it arrives", () => {
+  it("the studios' walk opens each step's panel as it arrives", () => {
     const { container } = mount(
       <>
         <Journey />
@@ -354,6 +382,6 @@ describe("the bar and its panels", () => {
     act(() => startTour("story-content", "story"));
     expect(journey.get().step).toBe("content");
     expect(panel(container).dataset.step).toBe("content");
-    expect(document.querySelector(".tour-card")?.textContent).toContain("Full story");
+    expect(document.querySelector(".tour-card")?.textContent).toContain("For studios");
   });
 });

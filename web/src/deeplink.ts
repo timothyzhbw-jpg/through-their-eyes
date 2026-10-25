@@ -17,16 +17,20 @@
 //   ?play=recap                                with ?match= (a stitched match): its end-of-match
 //                                              recap, asked for at once for ?persona and ?lang,
 //                                              with the full-time card on the live screen
-//   ?tour=1|<step id>                          the full judge tour (tour/), from its first step
-//                                              or from that one
-//   ?tour=quick|<step id>                      the quick tour (five steps), from its first step
-//                                              or from that one
-//   ?tour=story|<step id>                      the Full story (the journey's five steps, about
-//                                              ninety seconds), from its first step or that one
-//   ?step=event|tactics|your-view|content|value
-//                                              open that step of the journey (journey/): the
-//                                              moment, the Tactics lab, Your view, the content
-//                                              package and stadium screens, the business value
+//   ?door=look|turn|studios                    open that door (doors/): the look (the default),
+//                                              Your turn's hub, For studios' steps
+//   ?tour=1|<step id>                          the full judge tour (tour/), the three doors in
+//                                              order, from its first step or from that one
+//   ?tour=quick|<step id>                      the quick tour (door 1's story, ending on the
+//                                              doors), from its first step or from that one
+//   ?tour=story|<step id>                      the studios' walk (door 3's steps), from its first
+//                                              step or that one. Step ids from before the doors
+//                                              land where tour/steps.ts LEGACY_STEP_IDS says
+//   ?step=tactics|content|value|crew           open For studios on that step (journey/): the
+//                                              Tactics lab, the content package and stadium
+//                                              screens, the business value, the AI crew. From
+//                                              before the doors: event opens The look on its
+//                                              compare, your-view opens Settings on Your view
 //   ?play=eyes                                 open "Take his eyes" (takeeyes/) on the hero's own look;
 //                                              with ?match=, on its first hero moment that has
 //                                              a bundled look grid
@@ -44,11 +48,13 @@
 //   ?player=<roster id, e.g. H8>               follow a player: ringed in the 3D view and on the
 //                                              board, their moments first
 // (?persona and ?lang above also fill "Your view"; the four are kept in localStorage too.)
-// and the testing parameters ?autoplay=0, ?intro=0 (skip the intro card), ?rail=0 (no moment
-// links above the live screen: the framing of the demo video's captures), ?offline=1,
+// and the testing parameters ?autoplay=0, ?intro=0 (skip the intro card), ?rail=0 (no door tabs
+// in the header: the framing of the demo video's captures), ?offline=1,
 // ?plan=invalid (and ?rigged=0, read by players/trial.ts). A link that points at a spot
-// (at, run, ask, tamper, play, tour or step) skips the intro card and opens paused: no live stream,
-// and no breakdown on load unless tamper needs one. Unknown values are ignored and logged.
+// (at, run, ask, tamper, play, tour, step or door) skips the intro card and opens paused: no live
+// stream, and no breakdown on load unless tamper needs one. Unknown values are ignored and logged.
+// The door a link opens: ?door= if given; else the one its step, play or tamper belongs to
+// (doorOf); else the look.
 // ?cine=1 is for filming the demo video only (cine/, SPEC 10), never linked from the app; main.tsx
 // reads it, this parser does not.
 
@@ -60,8 +66,9 @@ import type { MomentContext } from "./plan/moment";
 import type { Session } from "./session";
 import { keyScanFrame, openingFrame, type Focus } from "./store/playback";
 import { IN_MATCH_MOMENTS } from "./moments/moments";
-import { QUICK_IDS, STEP_IDS, STORY_IDS } from "./tour/steps";
+import { LEGACY_STEP_IDS, QUICK_IDS, STEP_IDS, STORY_IDS } from "./tour/steps";
 import { parseStep, type JourneyStep } from "./journey/steps";
+import { doorOfPlay, doorOfStep, parseDoor, type Door } from "./doors/doors";
 import { MAX_QUESTION } from "./whatif/ask";
 import { LANGUAGES, type Language } from "./whatif/whatif";
 import { parsePlayer, parseTeam, type Team } from "./personal/follow";
@@ -75,6 +82,12 @@ const VIEWS = ["pov", "tactical", "split"] as const satisfies readonly Focus[];
 const NAMED_FRAMES = ["key-scan", "decision"] as const;
 const PLAYS = ["yourcall", "recap", "eyes", "steps", "drill"] as const;
 const CLAIM_ID = /^[a-z][a-z0-9_]{0,63}$/; // explain/builders.py ids, e.g. cf_value
+
+/** The old journey's steps that are no studio step now: door 1's compare, and Your view. */
+type LegacyStepLink = "event" | "your-view";
+
+const parseStepLink = (v: string): JourneyStep | LegacyStepLink | null =>
+  parseStep(v) ?? (v === "event" || v === "your-view" ? v : null);
 
 export type View = (typeof VIEWS)[number];
 export type At = number | (typeof NAMED_FRAMES)[number];
@@ -97,7 +110,9 @@ export interface DeepLink {
   play: Play | null; // yourcall: open "Your call" at the decision; recap: a match's recap; eyes: "Take his eyes"; steps: his looks, step by step; drill: the academy drill
   tour: string | null; // the judge tour's step to start at (tour=1: its first)
   moment: string | null; // with a stitched match: the hero moment of this scenario, its breakdown
-  step: JourneyStep | null; // the journey step whose panel opens (journey/)
+  step: JourneyStep | LegacyStepLink | null; // the studios' step whose panel opens (journey/),
+  // or a step from before the doors (event, your-view)
+  door: Door | null; // ?door=: the door to open (doors/); null: the one the link points into
   rail: boolean; // the moment links above the live screen; rail=0 hides them (filming)
   warnings: string[]; // "name=value" of parameters whose value was not understood
 }
@@ -120,6 +135,7 @@ export const NO_LINK: DeepLink = {
   tour: null,
   moment: null,
   step: null,
+  door: null,
   rail: true,
   warnings: [],
 };
@@ -161,10 +177,11 @@ export function parseDeepLink(search: string): DeepLink {
         ? QUICK_IDS[0]
         : v === "story"
           ? STORY_IDS[0]
-          : oneOf([...STEP_IDS, ...QUICK_IDS, ...STORY_IDS] as const, v),
+          : (LEGACY_STEP_IDS[v] ?? oneOf([...STEP_IDS, ...QUICK_IDS, ...STORY_IDS] as const, v)),
   );
   const moment = read("moment", (v) => oneOf(IN_MATCH_MOMENTS, v));
-  const step = read("step", parseStep);
+  const step = read("step", parseStepLink);
+  const door = read("door", parseDoor);
   const spot =
     at !== null ||
     run !== null ||
@@ -173,7 +190,8 @@ export function parseDeepLink(search: string): DeepLink {
     play !== null ||
     tour !== null ||
     moment !== null ||
-    step !== null;
+    step !== null ||
+    door !== null;
   return {
     autoplay: params.get("autoplay") !== "0" && !spot,
     intro: params.get("intro") !== "0" && !spot,
@@ -192,8 +210,25 @@ export function parseDeepLink(search: string): DeepLink {
     tour,
     moment,
     step,
+    door,
     rail: params.get("rail") !== "0",
     warnings,
+  };
+}
+
+/** Where a link opens among the doors: the door, the studios' step to open (null: as it is), and
+ * whether Settings opens on Your view (the old ?step=your-view). */
+export function doorOf(link: DeepLink): {
+  door: Door;
+  studio: JourneyStep | null;
+  yourView: boolean;
+} {
+  const fromStep = link.step ? doorOfStep(link.step) : null;
+  const door = link.door ?? fromStep?.door ?? (link.play ? doorOfPlay(link.play) : null) ?? "look"; // tamper, at, run, ask: the picture
+  return {
+    door,
+    studio: door === "studios" ? (fromStep?.studio ?? null) : null,
+    yourView: link.step === "your-view",
   };
 }
 

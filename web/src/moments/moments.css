@@ -1,5 +1,5 @@
-/* The moment links (MomentRail.tsx): a row of chips on the intro card, and the header's Moments
-   menu (its list: styles.css .moments-panel). Small chips; on a phone they wrap into rows. */
+/* The moment links (MomentRail.tsx), the moment picker in the header's Settings (its list there:
+   doors/doors.css). The page on screen is marked in chalk. */
 .moment-chips ul {
   display: flex;
   flex-wrap: wrap;
@@ -43,24 +43,4 @@
 }
 .moment-chip.match[aria-current="page"] i {
   background: var(--night);
-}
-/* The academy drill: a game, set apart from the moments by a hairline (chalk like them: the accent
-   is the look's and the primary action's). */
-.moment-chips .drill-item {
-  display: flex;
-  align-items: center;
-  padding-left: 6px;
-  border-left: 1px solid var(--hairline-strong);
-}
-@media (max-width: 760px) {
-  /* A phone's intro card sheet wraps the chips into rows, a little tighter than on a desktop: a
-     row that scrolled sideways clipped its last chips with nothing to say so. */
-  .moment-chips ul {
-    gap: 6px 4px;
-  }
-  .moment-chip {
-    height: 28px;
-    padding: 0 10px;
-    font-size: 12.5px;
-  }
 }

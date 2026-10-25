@@ -2,7 +2,8 @@
 
 An invariant sweep with the audit's own judge (`eval.laws.audit_run`): every scenario on design and
 held-out seeds, each hero's intervention, and both served stitched matches. The full audit runs
-2,918 runs (`uv run python -m eval.laws`, eval/reports/laws.md); this sweep is its CI-sized slice.
+many more runs (`uv run python -m eval.laws`, eval/reports/laws.md); this sweep is its CI-sized
+slice.
 """
 
 import numpy as np

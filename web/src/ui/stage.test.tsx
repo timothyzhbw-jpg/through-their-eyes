@@ -23,10 +23,10 @@ import { PITCH_DATA_KEY, pitchData, setPitchData } from "./pitchData";
 import {
   CameraSwitch,
   CARD_LINE,
-  HeaderMore,
-  headerMore,
   MomentCard,
   revealInMenu,
+  SettingsMenu,
+  settingsMenu,
   StageHud,
   SwapViews,
   ViewerMenu,
@@ -190,19 +190,21 @@ describe("view options", () => {
   });
 });
 
-describe("the header's More", () => {
-  afterEach(() => act(() => headerMore.set({ open: false })));
+describe("the header's Settings", () => {
+  afterEach(() => act(() => settingsMenu.set({ open: false })));
 
   it("keeps its items mounted while closed; Escape and a press outside close it", () => {
     const page = mount(
       offline(),
-      <HeaderMore>
+      <SettingsMenu>
         <button type="button" id="item-a" className="btn">
           A
         </button>
-      </HeaderMore>,
+      </SettingsMenu>,
     );
-    const toggle = button(page, "More");
+    const toggle = button(page, "Settings");
+    expect(toggle.id).toBe("settings");
+    expect(text(toggle)).toBe("Settings"); // "⋯ Settings": the dots are an icon
     const panel = page.querySelector<HTMLElement>(".more-panel")!;
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(toggle.getAttribute("aria-controls")).toBe(panel.id);
@@ -225,23 +227,23 @@ describe("the header's More", () => {
     expect(panel.hidden).toBe(true);
   });
 
-  it("closes behind a mode opened from it, so it is not left open on return", () => {
+  it("closes behind a tour started from it, so it is not left open on return", () => {
     const page = mount(
       offline(),
-      <HeaderMore>
-        <button type="button" id="take-eyes-open" className="btn">
-          Take his eyes
+      <SettingsMenu>
+        <button type="button" className="btn tour-start">
+          Full tour
         </button>
         <button type="button" id="item-a" className="btn">
           A
         </button>
-      </HeaderMore>,
+      </SettingsMenu>,
     );
     const panel = page.querySelector<HTMLElement>(".more-panel")!;
-    click(button(page, "More"));
+    click(button(page, "Settings"));
     click(page.querySelector<HTMLElement>("#item-a")!);
     expect(panel.hidden).toBe(false);
-    click(page.querySelector<HTMLElement>("#take-eyes-open")!);
+    click(button(page, "Full tour"));
     expect(panel.hidden).toBe(true);
   });
 
@@ -249,11 +251,11 @@ describe("the header's More", () => {
     const page = mount(
       offline(),
       <>
-        <HeaderMore>
+        <SettingsMenu>
           <button type="button" id="item-a" className="btn">
             A
           </button>
-        </HeaderMore>
+        </SettingsMenu>
         <button type="button" id="outside">
           B
         </button>

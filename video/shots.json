@@ -21,7 +21,7 @@
       "setup": [{ "do": "wait", "for": "assets", "covered": true }],
       "actions": [
         { "do": "hold", "s": 4, "still": true },
-        { "do": "click", "role": "button", "name": "Start watching" }
+        { "do": "click", "role": "button", "name": "Watch the look" }
       ],
       "vo": "Before kick-off: every player, and every look over his shoulder in this move."
     },
@@ -36,10 +36,10 @@
       "crop": "pov",
       "setup": [
         { "do": "wait", "for": "assets" },
-        { "do": "click", "role": "button", "name": "More", "exact": true },
+        { "do": "click", "role": "button", "name": "Settings", "exact": true },
         { "do": "click", "role": "button", "name": "View options" },
         { "do": "select", "label": "Playback speed", "value": "0.5" },
-        { "do": "click", "role": "button", "name": "More", "exact": true },
+        { "do": "click", "role": "button", "name": "Settings", "exact": true },
         { "do": "click", "role": "button", "name": "Key scan" }
       ],
       "actions": [
@@ -88,7 +88,7 @@
         { "do": "wait", "for": "breakdown", "persona": "casual", "language": "en", "timeout_s": 90 }
       ],
       "actions": [
-        { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "click", "within": ".moment-card", "role": "button", "name": "Play breakdown" },
         { "do": "scroll", "y": 0 },
         { "do": "wait", "for": "caption", "hold": 1.5, "still": true },
         { "do": "wait", "for": "breakdown-done", "timeout_s": 60 }
@@ -148,7 +148,7 @@
         }
       ],
       "actions": [
-        { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "click", "within": ".moment-card", "role": "button", "name": "Play breakdown" },
         { "do": "scroll", "y": 0 },
         { "do": "wait", "for": "caption", "hold": 8, "still": true }
       ],
@@ -170,7 +170,7 @@
         { "do": "wait", "for": "breakdown", "persona": "casual", "language": "zh", "timeout_s": 90 }
       ],
       "actions": [
-        { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "click", "within": ".moment-card", "role": "button", "name": "Play breakdown" },
         { "do": "scroll", "y": 0 },
         { "do": "wait", "for": "caption", "hold": 8, "still": true }
       ],
@@ -192,7 +192,7 @@
         { "do": "wait", "for": "breakdown", "persona": "casual", "language": "en", "timeout_s": 90 }
       ],
       "actions": [
-        { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "click", "within": ".moment-card", "role": "button", "name": "Play breakdown" },
         { "do": "scroll", "y": 0 },
         { "do": "wait", "for": "caption-with-evidence", "hold": 1 },
         { "do": "click", "selector": ".caption", "hold": 5, "still": true }
@@ -292,13 +292,11 @@
       "spec_beat": "1:31-1:45",
       "title": "Take the Telestrator down: its template airs and the breakdown still plays; bring it back from the checkpoint",
       "status": "ready",
-      "url": "https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0&autoplay=0&rail=0",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&step=crew&autoplay=0&rail=0",
       "viewport": { "width": 1920, "height": 1080 },
       "target_s": 12,
       "crop": null,
       "setup": [
-        { "do": "wait", "for": "assets" },
-        { "do": "click", "role": "button", "name": "Ask now" },
         {
           "do": "wait",
           "for": "breakdown",
@@ -502,7 +500,7 @@
         { "do": "wait", "for": "breakdown", "persona": "casual", "language": "en", "timeout_s": 90 }
       ],
       "actions": [
-        { "do": "click", "within": ".panel.breakdown", "role": "button", "name": "Play breakdown" },
+        { "do": "click", "within": ".moment-card", "role": "button", "name": "Play breakdown" },
         { "do": "scroll", "y": 0 },
         { "do": "hold", "s": 6 }
       ],
@@ -532,13 +530,11 @@
       "spec_beat": "trailer, the crew",
       "title": "The crew trace: one real run of the agent crew as lanes over time (Director, Analyst with its MCP tools, Telestrator, Narrator, Verifier, Voice)",
       "status": "ready",
-      "url": "https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0&autoplay=0&rail=0",
+      "url": "https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&step=crew&autoplay=0&rail=0",
       "viewport": { "width": 1920, "height": 1080 },
       "target_s": 2,
       "crop": null,
       "setup": [
-        { "do": "wait", "for": "assets" },
-        { "do": "click", "role": "button", "name": "Ask now" },
         { "do": "wait", "for": "breakdown", "persona": "analyst", "language": "en", "timeout_s": 90 },
         { "do": "scroll", "to": "section.producer", "block": "center" }
       ],

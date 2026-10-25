@@ -1,29 +1,34 @@
-// The journey (SPEC 7): one coherent path through a hero moment, from the event on the pitch to its
-// value off it. A bar that stays on screen while the moment's story scrolls ("Event → Tactics →
-// Your view → Content → Value"; on a phone a stepper), and under it the open step's panel, all for
-// the moment on screen:
-// - Event: the moment, with the look and without it, each side told by its verified lines;
+// The studios' journey (SPEC 7, door 3 of doors/): one coherent path through a hero moment, from
+// why its tactics work to what it is worth off the pitch, then the crew behind it. A bar that stays
+// on screen while the door's page scrolls ("Tactics → Content → Value → Behind the scenes"; on a
+// phone a stepper), and under it the open step's panel, all for the moment on screen:
 // - Tactics: the Tactics lab (tacticslab/);
-// - Your view: the audience, the language and who to follow (personal/);
 // - Content: the content package (studio/) and the stadium's screens (stadium/);
-// - Value: the business panel (studio/) and the stadium's sponsor slots, both demo data.
-// Arrow keys, Home and End move along the bar; ?step=<id> opens a step (deeplink.ts). Nothing here
-// calls the service or a model: every panel reads what the page already has, or bundled files.
+// - Value: the business panel (studio/) and the stadium's sponsor slots, both demo data;
+// - Behind the scenes: the AI crew's breakdown (its cue list, the failure drill, the trace) and its
+//   evidence, opened on the picture.
+// Each step ends on one action: the next step. Arrow keys, Home and End move along the bar;
+// ?door=studios&step=<id> opens a step (deeplink.ts). The moment itself, with the look and without
+// it, is door 1's compare (ComparePanel, below). Nothing here calls a model by itself: every panel
+// reads what the page already has, bundled files, or a cached breakdown (gate.tsx).
 
 import { Fragment, lazy, Suspense, useEffect, useRef, type KeyboardEvent } from "react";
 import { runLabels } from "../data/hero";
+import { openDoor } from "../doors/state";
 import { TacticsLabPanel } from "../tacticslab/TacticsLab";
-import { YourViewControls } from "../personal/YourView";
 import { useSession } from "../session";
 import { EVENT_LABEL } from "../stadium/rules";
 import type { Show } from "../stadium/show";
+import { stepThroughOf } from "../steps/controller";
 import { useStore } from "../store/store";
 import { BusinessValue, StudioPackage } from "../studio/Studio";
-import { enterStep } from "../tour/actions";
+import { enterStep, showEvidence } from "../tour/actions";
 import { StepLines } from "../tour/StepLines";
-import { TourButton } from "../tour/Tour";
+import { BreakdownPanel } from "../ui/BreakdownPanel";
 import { Chapter, Title } from "../ui/Chapter";
+import { ArrowIcon } from "../ui/icons";
 import { LineText } from "../ui/Narration";
+import { jumpTo, useReveal } from "../ui/reveal";
 import { blurbOf } from "../ui/Stage";
 import { withoutLookOf } from "../without/without";
 import { WithoutLookLines } from "../without/WithoutLook";
@@ -62,9 +67,7 @@ export function Journey() {
   // glide: the page jumps there.
   useEffect(() => {
     if (seq === 0) return;
-    const id = requestAnimationFrame(() =>
-      panel.current?.scrollIntoView({ block: "start", behavior: "instant" }),
-    );
+    const id = requestAnimationFrame(() => panel.current && jumpTo(panel.current));
     return () => cancelAnimationFrame(id);
   }, [seq]);
   return (
@@ -79,6 +82,7 @@ export function Journey() {
         data-step={step}
       >
         <StepPanel step={step} />
+        <NextStep step={step} />
       </div>
     </div>
   );
@@ -99,8 +103,8 @@ function JourneyBar({ step }: { step: JourneyStep }) {
   const i = stepIndex(step);
   const last = JOURNEY_STEPS.length - 1;
   return (
-    <nav className="journey-bar" aria-label="This moment, from event to value">
-      <div className="journey-tabs" role="tablist" aria-label="Journey steps" onKeyDown={onKeyDown}>
+    <nav className="journey-bar" aria-label="For studios, from tactics to the crew">
+      <div className="journey-tabs" role="tablist" aria-label="Studio steps" onKeyDown={onKeyDown}>
         {JOURNEY_STEPS.map((s, k) => (
           <Fragment key={s}>
             {k > 0 && (
@@ -130,7 +134,7 @@ function JourneyBar({ step }: { step: JourneyStep }) {
           </Fragment>
         ))}
       </div>
-      {/* A phone: the same five steps as a stepper, one at a time. */}
+      {/* A phone: the same steps as a stepper, one at a time. */}
       <div className="journey-stepper">
         <button
           type="button"
@@ -157,35 +161,66 @@ function JourneyBar({ step }: { step: JourneyStep }) {
           Next
         </button>
       </div>
-      <TourButton className="btn btn-quiet journey-story" kind="story" />
     </nav>
+  );
+}
+
+/** The step's one action, under its panel: on to the next step; after the last, the end. */
+function NextStep({ step }: { step: JourneyStep }) {
+  const i = stepIndex(step);
+  if (i === JOURNEY_STEPS.length - 1) {
+    return (
+      <p className="journey-end note">
+        That&apos;s the studio side: every number above is checked in code or labelled as demo data.
+      </p>
+    );
+  }
+  const next = moveStep(step, 1);
+  return (
+    <div className="journey-next">
+      <button
+        type="button"
+        className="btn btn-primary"
+        onClick={() => {
+          pick(next);
+          document.getElementById(tabId(next))?.focus({ preventScroll: true });
+        }}
+      >
+        Next: {STEP_LABEL[next]}
+        <ArrowIcon />
+      </button>
+    </div>
   );
 }
 
 function StepPanel({ step }: { step: JourneyStep }) {
   switch (step) {
-    case "event":
-      return <EventPanel />;
     case "tactics":
       return <TacticsLabPanel kicker={kickerOf("tactics")} />;
-    case "your-view":
-      return <YourViewPanel />;
     case "content":
       return <ContentPanel />;
     case "value":
       return <ValuePanel />;
+    case "crew":
+      return <CrewPanel />;
   }
 }
 
 const kickerOf = (step: JourneyStep) =>
   `Step ${stepIndex(step) + 1} of ${JOURNEY_STEPS.length} · ${STEP_LABEL[step]}`;
 
-// ---------- Event: the moment, with the look and without it ----------
+// ---------- door 1's compare: the moment, with the look and without it ----------
 
-function EventPanel() {
+/** The look's door, under the picture: the moment with the look and without it, each side told by
+ * its verified lines (the switch to the run with two more looks is in the without side's lines),
+ * and the scan story one link away. */
+export function ComparePanel() {
+  const factualCard = useReveal<HTMLElement>();
+  const counterfactualCard = useReveal<HTMLElement>(1);
   const session = useSession();
   const { hero } = session;
   const bundled = useStore(withoutLookOf(session).state, (s) => s.data);
+  const steps = stepThroughOf(session);
   const labels = runLabels(hero);
   // The app's own controls, as the tours use them: the picture is at the top of the page.
   const show = (name: "look" | "counterfactual" | "compare") => {
@@ -195,7 +230,7 @@ function EventPanel() {
   return (
     <Chapter
       className="journey-step journey-event"
-      kicker={kickerOf("event")}
+      kicker="The look · compared"
       title={
         hero.counterfactual ? (
           <Title lead={`${labels.factual},`} em={`${labels.counterfactual.toLowerCase()}.`} />
@@ -208,11 +243,11 @@ function EventPanel() {
           ? `${blurbOf(hero)} Watch it, then the same seconds re-simulated with that one change; each side is told by its checked lines.`
           : blurbOf(hero)
       }
-      label="Event"
+      label="The look, compared"
     >
       <div className="pick-row">
-        <button type="button" className="btn btn-primary" onClick={() => show("look")}>
-          {hero.keyScan ? "Watch the look" : "Watch the moment"}
+        <button type="button" className="btn" onClick={() => show("look")}>
+          {hero.keyScan ? "With the look" : "Watch the moment"}
         </button>
         {hero.counterfactual && (
           <>
@@ -224,17 +259,33 @@ function EventPanel() {
             </button>
           </>
         )}
-        {/* On a phone the bar has no room for it: the Full story starts here. */}
-        <TourButton className="btn btn-quiet journey-story-here" kind="story" />
+        {!steps.unavailable && (
+          <button
+            id="scan-steps-story"
+            type="button"
+            className="btn btn-quiet"
+            title="Step through each look he took, frozen, then his decision"
+            onClick={() => {
+              window.scrollTo({ top: 0 });
+              steps.open();
+            }}
+          >
+            Step through his looks
+          </button>
+        )}
       </div>
       <div className="tile-grid journey-compare">
-        <article className="tile" aria-label={labels.factual}>
+        <article className="tile" aria-label={labels.factual} ref={factualCard}>
           <p className="kicker accent">{labels.factual}</p>
           <TheLook />
           <StepLines say="look" />
         </article>
         {hero.counterfactual && (
-          <article className="tile journey-without" aria-label={labels.counterfactual}>
+          <article
+            className="tile journey-without"
+            aria-label={labels.counterfactual}
+            ref={counterfactualCard}
+          >
             <p className="kicker">{labels.counterfactual}</p>
             {bundled ? <WithoutLookLines /> : <StepLines say="without" />}
           </article>
@@ -264,24 +315,6 @@ function TheLook() {
 }
 
 const REMOVED_LOOK = "removed_look"; // explain/look_cost.py: which look the comparison removes
-
-// ---------- Your view ----------
-
-function YourViewPanel() {
-  return (
-    <Chapter
-      className="journey-step journey-your-view"
-      kicker={kickerOf("your-view")}
-      title={<Title lead="Your view," em="your moments." />}
-      lede="Pick who the commentary is for and its language, and follow a club or a player: their moments come first on the rail, and the player is ringed in the 3D view and on the board."
-      label="Your view"
-    >
-      <div className="your-view-inline tile">
-        <YourViewControls />
-      </div>
-    </Chapter>
-  );
-}
 
 // ---------- Content: the package and the stadium's screens ----------
 
@@ -387,5 +420,37 @@ function ValuePanel() {
         </Suspense>
       )}
     </Chapter>
+  );
+}
+
+// ---------- Behind the scenes: the AI crew ----------
+
+/** The crew's breakdown as the existing panel tells it (its cue list, the failure drill, the crew
+ * trace), and its evidence: each claim's events, opened on the picture in door 1. */
+function CrewPanel() {
+  const session = useSession();
+  useCachedBreakdown(); // a cold visit (?step=crew): the cached breakdown the crew wrote
+  return (
+    <div className="journey-crew">
+      <BreakdownPanel
+        kicker={`${kickerOf("crew")}: the AI crew`}
+        lead={
+          <div className="pick-row">
+            <button
+              type="button"
+              className="btn"
+              title="A claim of the commentary, the Verifier's verdict and the match events it rests on"
+              onClick={() => {
+                openDoor("look", { address: true });
+                window.scrollTo({ top: 0 });
+                showEvidence(session);
+              }}
+            >
+              Open the evidence
+            </button>
+          </div>
+        }
+      />
+    </div>
   );
 }

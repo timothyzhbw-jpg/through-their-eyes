@@ -737,6 +737,40 @@ def _pitch_lane(ctx: EvalContext, run: MatchRun, f: int, player: str) -> str:
     return _lane_at(_attacking(run, ctx.player(run, player), f)[1])
 
 
+def _depth(ctx: EvalContext, run: MatchRun, f: int, player: str) -> float:
+    """Metres up the pitch toward the goal his team attacks: dropping back lowers it."""
+    return float(_attacking(run, ctx.player(run, player), f)[0])
+
+
+def _square(run: MatchRun, i: int, f: int) -> float:
+    """Bearing (rad) from player i at frame f to where the last pass to him by then started:
+    facing it, he is square to the ball."""
+    pid = run.ids[i]
+    passes = [e for e in run.events
+              if e.type == "pass" and e.attrs.get("to") == pid and e.frame <= f]  # fmt: skip
+    if not passes:
+        raise Inconclusive(f"no pass to {pid} by frame {f}")
+    rel = np.asarray(passes[-1].attrs["start"], dtype=float) - run.pos[f, i]
+    return float(np.arctan2(rel[1], rel[0]))
+
+
+def _body_open(ctx: EvalContext, run: MatchRun, f: int, player: str) -> float:
+    """Degrees his body is turned from square to the last pass to him (0: facing where it came
+    from; 90: side-on; 180: his back to it). The sim's body yaw (SPEC 3.1)."""
+    i = ctx.player(run, player)
+    return abs(float(np.rad2deg(wrap_angle(run.body_yaw[f, i] - _square(run, i, f)))))
+
+
+def _turned_away(ctx: EvalContext, run: MatchRun, f: int, player: str, opponent: str) -> bool:
+    """His body is turned from square to the side away from `opponent` (`_body_open`)."""
+    i, j = ctx.player(run, player), ctx.player(run, opponent)
+    square = _square(run, i, f)
+    rel = run.pos[f, j] - run.pos[f, i]
+    turn = float(wrap_angle(run.body_yaw[f, i] - square))
+    side = float(wrap_angle(np.arctan2(rel[1], rel[0]) - square))
+    return bool(turn * side < 0.0)
+
+
 def _decision(ctx: EvalContext, run: MatchRun, f: int, player: str) -> Decision:
     ctx.player(run, player)
     d = next((d for d in run.decisions if d.player == player and d.frame == f), None)
@@ -925,6 +959,9 @@ METRICS: dict[str, Callable[..., Any]] = {
     "nearest_opponent": _nearest_opponent,
     "pitch_band": _pitch_band,
     "pitch_lane": _pitch_lane,
+    "depth": _depth,
+    "body_open": _body_open,
+    "turned_away": _turned_away,
     "time_since_last_scan": _time_since_last_scan,
     "visibility": _visibility,
     "blind_side": _blind_side,

@@ -215,7 +215,7 @@ describe("the pre-match autoplay gate", () => {
           click(button(page, "Just watch"));
         },
       ],
-      ["Start", (page) => click(button(page, "Start"))],
+      ["Watch the look", (page) => click(button(page, "Watch the look"))],
       [
         "Escape",
         () =>
@@ -234,7 +234,7 @@ describe("the pre-match autoplay gate", () => {
           <App autoplay={false} />
         </SessionContext.Provider>,
       );
-      expect(document.activeElement?.textContent, how).toBe("Start");
+      expect(document.activeElement?.textContent, how).toBe("Watch the look");
       close(container);
       expect(container.querySelector("[role=dialog]"), how).toBeNull();
       // Not <body>: the next Tab would skip the whole live screen.
@@ -356,7 +356,7 @@ describe("the pre-match autoplay gate", () => {
     expect(intro.get().open).toBe(true);
     expect(session.playback.get()).toMatchObject({ live: true, playing: true });
     expect(session.feed!.state.get().status).toBe("streaming");
-    click(button(container, "Start"));
+    click(button(container, "Watch the match"));
     expect(container.querySelector("[role=dialog]")).toBeNull();
     expect(session.playback.get()).toMatchObject({ live: true, playing: true });
   });
@@ -393,7 +393,7 @@ describe("the pre-match autoplay gate", () => {
     expect(session.playback.get().povPlayer).toBe("H8");
   });
 
-  it("lets a tour started from the card keep its first step: no autoplay over it", () => {
+  it("lets a tour started as the card closes keep its first step: no autoplay over it", () => {
     const { session, sockets } = onlineHero();
     const live = vi.spyOn(session.controls, "startLive");
     intro.set({ open: true });
@@ -402,7 +402,7 @@ describe("the pre-match autoplay gate", () => {
         <App autoplay />
       </SessionContext.Provider>,
     );
-    click(button(container, "Teams and more"));
+    // Settings' Full tour (the card's page is inert behind it; a click from code still lands).
     click(button(container, "Full tour · 90 s"));
     expect(intro.get().open).toBe(false);
     expect(tour.get().open).toBe(true);
@@ -412,7 +412,7 @@ describe("the pre-match autoplay gate", () => {
     act(() => closeTour());
   });
 
-  it("Start on a cold load opens the quick tour: the look plays in his eyes, nothing streams", async () => {
+  it("Watch the look on a cold load opens door 1's story: the look plays in his eyes, nothing streams", async () => {
     const { session, sockets } = onlineHero();
     const live = vi.spyOn(session.controls, "startLive");
     intro.set({ open: true });
@@ -421,7 +421,7 @@ describe("the pre-match autoplay gate", () => {
         <App autoplay />
       </SessionContext.Provider>,
     );
-    click(button(container, "Start"));
+    click(button(container, "Watch the look"));
     await act(settle);
     expect(tour.get()).toMatchObject({ open: true, kind: "quick" });
     expect(document.querySelector(".tour")?.getAttribute("data-step")).toBe("look");

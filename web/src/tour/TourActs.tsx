@@ -1,15 +1,18 @@
 // The tour card's own button on a step, for what calls the live service: the wrong-number check
 // (POST /api/verify), the sound, and the failure drill and its bring-back (each a fresh crew run).
 // The tour never presses these by itself; each is the viewer's click on the app's own control.
-// The quick tour's buttons call nothing: the look again, and on to the full tour.
+// The quick tour's buttons call nothing: the look again, the scan story, and its end card's doors.
 
 import type { ComponentType } from "react";
+import { openDoor } from "../doors/state";
 import { useBreakdown, useSession } from "../session";
+import { stepThroughOf } from "../steps/controller";
 import { useStore } from "../store/store";
 import { wrongNumber } from "../tamper/tamper";
+import { ArrowIcon } from "../ui/icons";
 import { playTheLook, tourClaim } from "./actions";
 import type { ActName } from "./steps";
-import { startTour } from "./tourState";
+import { closeTour, leaveTourFor, startTour } from "./tourState";
 
 /** Check the evidence card's prefilled wrong number: the verifier's answer shows in the card. */
 function CheckWrongNumber() {
@@ -114,12 +117,51 @@ function ReplayLook() {
   );
 }
 
-/** From the quick tour's last step to the full one. */
-function FullTour() {
+/** The id of the compare step's link to the scan story: the keyboard comes back to it. */
+export const SCAN_STEPS_LINK = "tour-scan-steps";
+
+/** The compare step's secondary link: the scan story, his looks one by one (the run with two more
+ * looks is the switch in the step's own lines). The tour waits on this step until it closes. */
+function ScanSteps() {
+  const steps = stepThroughOf(useSession());
+  if (steps.unavailable) return null;
   return (
-    <button type="button" className="btn" onClick={() => startTour(null, "full")}>
-      Full tour · 90 s
+    <button
+      id={SCAN_STEPS_LINK}
+      type="button"
+      className="btn btn-quiet"
+      title="Step through each look he took, frozen, then his decision"
+      onClick={() => {
+        leaveTourFor(SCAN_STEPS_LINK);
+        window.scrollTo({ top: 0 });
+        steps.open();
+      }}
+    >
+      Step through his looks
     </button>
+  );
+}
+
+/** The quick tour's end card: exactly three choices, the other two doors and the look again. */
+function Doors() {
+  const go = (door: "turn" | "studios") => {
+    closeTour({ restore: false });
+    openDoor(door, { address: true, focus: true }); // at the door's top
+  };
+  return (
+    <div className="tour-doors">
+      <button type="button" className="btn btn-primary" onClick={() => go("turn")}>
+        Your turn
+        <ArrowIcon />
+      </button>
+      <button type="button" className="btn" onClick={() => go("studios")}>
+        For studios
+        <ArrowIcon />
+      </button>
+      <button type="button" className="btn btn-quiet" onClick={() => startTour(null, "quick")}>
+        Watch again
+      </button>
+    </div>
   );
 }
 
@@ -129,5 +171,6 @@ export const ACT_VIEW: Record<ActName, ComponentType> = {
   drill: Drill,
   openMatch: OpenMatch,
   replayLook: ReplayLook,
-  fullTour: FullTour,
+  scanSteps: ScanSteps,
+  doors: Doors,
 };

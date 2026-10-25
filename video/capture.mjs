@@ -113,8 +113,13 @@ const afterFrames = (page, n) =>
     n,
   );
 
+// The breakdown's own button: on the moment card over the picture (The look), or in the crew's
+// panel (For studios' Behind the scenes); the two say the same.
 const breakdownButton = (page, name) =>
-  page.locator(".panel.breakdown").getByRole("button", { name, exact: true });
+  page
+    .locator(".moment-card, .panel.breakdown")
+    .getByRole("button", { name, exact: true })
+    .first();
 
 const WAITS = {
   /** The match is loaded, both views are up, fonts and the player model are in. */
@@ -153,18 +158,25 @@ const WAITS = {
   live: (page, a, timeout) => page.locator(".live-status.streaming").waitFor({ timeout }),
   /** The stream has detected the hero moment. */
   moment: (page, a, timeout) => page.locator(".moment-list li.hero").waitFor({ timeout }),
-  /** The breakdown for `persona` / `language` is on screen (cached, generated or template). */
+  /** The breakdown for `persona` / `language` is on screen (cached, generated or template): on
+   * The look, its narration panel says whose it is and the moment card says it is in; on For
+   * studios' Behind the scenes (no narration panel), the crew's panel has its plan. */
   async breakdown(page, a, timeout) {
     const want = `${a.persona ?? "casual"} · ${a.language ?? "en"}`;
     const handle = await page.waitForFunction(
       (want) => {
         const panel = document.querySelector(".panel.narration");
-        if (!panel) return null;
-        const failed = panel.querySelector(".plan-errors");
+        const crew = document.querySelector(".panel.breakdown");
+        if (!panel && !crew) return null;
+        const failed = (panel ?? crew).querySelector(".plan-errors");
         if (failed) return { failed: failed.textContent.trim() };
-        if (panel.querySelector(".note.waiting")) return null;
+        if ((panel ?? crew).querySelector(".note.waiting")) return null;
+        if (!panel) return crew.querySelector(".plan-badge") ? { ok: true } : null;
         const meta = panel.querySelector(".breakdown-head .meta")?.textContent?.trim();
-        const ready = document.querySelector(".panel.breakdown .plan-badge");
+        // In: the card's button plays it (not "Get breakdown" or "Loading…").
+        const ready = [...document.querySelectorAll(".moment-card .card-actions .btn")].some((b) =>
+          /^((Play|Replay) breakdown|Stop)$/.test(b.textContent.trim()),
+        );
         return meta === want && ready ? { ok: true } : null;
       },
       want,
