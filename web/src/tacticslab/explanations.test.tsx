@@ -93,21 +93,25 @@ describe("Pro and Plain", () => {
     }
   });
 
-  it("switches the counter between a fan sentence and the measured model", () => {
+  it("switches every parameter row between Plain and Pro without losing the numbers", () => {
     vi.stubGlobal("fetch", async () => json(bundle));
     const { page } = mount("casual", <TacticsLabPanel xt={xt} scope={scope} />);
     pick(page, "Counter-attack");
     const card = () => page.querySelector<HTMLElement>('[data-card="counter_attack"]')!;
-    expect(card().querySelector(".lab-table")).toBeNull();
+    expect(card().querySelector(".lab-table")).not.toBeNull();
     expect(text(card().querySelector("[role=tabpanel]"))).toMatch(/^Win it and go/);
+    const row = () => card().querySelector('[data-parameter="progression"]')!;
+    expect(text(row())).toContain("moving the ball into more dangerous space");
     act(() => tab(card(), "Pro").click());
     expect(tab(card(), "Pro").getAttribute("aria-selected")).toBe("true");
     expect(card().querySelector(".lab-table")).not.toBeNull();
+    expect(text(row())).toContain("Expected threat added by the counter's completed passes");
     expect(text(card())).toContain("the opponents' half");
     expect(text(card())).toContain("attacking third");
     expect(text(card())).toContain("does not split it into shot, goal and move parts");
     act(() => tab(card(), "Plain").click());
-    expect(card().querySelector(".lab-table")).toBeNull();
+    expect(text(row())).toContain("moving the ball into more dangerous space");
+    expect(text(row())).not.toContain("Expected threat added by the counter's completed passes");
   });
 
   it("uses metric results, not hand-written result digits", () => {
@@ -117,10 +121,10 @@ describe("Pro and Plain", () => {
     expect(card.metrics.find((m) => m.label === "Win to final third or shot")!.values).toEqual([
       `${best.seconds.toFixed(1)} s`,
     ]);
-    expect(card.metrics.find((m) => m.label === "Completed passes")!.values).toEqual([
+    expect(card.metrics.find((m) => m.label === "Passes used")!.values).toEqual([
       String(best.passes),
     ]);
-    expect(card.metrics.find((m) => m.label === "xT gained")!.values).toEqual([
+    expect(card.metrics.find((m) => m.label === "Progression · xT gained")!.values).toEqual([
       `${best.xtAdded >= 0 ? "+" : "−"}${Math.abs(best.xtAdded).toFixed(3)}`,
     ]);
 
@@ -135,13 +139,13 @@ describe("Pro and Plain", () => {
     const transition = cards.find((c) => c.id === "transition")!;
     const after = transitionAfterLoss(match, xt).best!;
     expect(transition.pro).toContain(after.seconds.toFixed(1));
-    expect(transition.metrics[0].values).toEqual([`${after.lineTowardGoal.toFixed(1)} m`]);
-    expect(transition.metrics[1].values).toEqual([
+    expect(transition.metrics[0].values).toEqual([
       `${after.spaceAtLoss.toFixed(1)} m → ${after.spaceAtEnd.toFixed(1)} m`,
     ]);
-    expect(transition.metrics[2].values).toEqual([
+    expect(transition.metrics[1].values).toEqual([
       `${after.xtStart.toFixed(3)} → ${after.xtPeak.toFixed(3)}`,
     ]);
+    expect(transition.metrics.map((m) => m.label)).not.toContain("Recovery runs");
   });
 });
 

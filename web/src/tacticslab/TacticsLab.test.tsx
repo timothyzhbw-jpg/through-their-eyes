@@ -17,6 +17,7 @@ import { parseTactics } from "../tactics/tactics";
 import tacticsFixture from "../tactics/fixture.json";
 import { API, fakeFetch, fakeSockets, matchExport, pressureExport, render } from "../testing";
 import type { Scope } from "./scope";
+import matchFixture from "./fixture_match1_transitions.json";
 import { CARD_IDS, buildCards, compareHref, momentHref } from "./cards";
 import { XG_CAP, XG_D0, XG_PEAK, XG_SCALE, distanceXg, parseXtGrid } from "./metrics";
 import { TacticsLabPanel } from "./TacticsLab";
@@ -60,35 +61,37 @@ function match() {
 
 describe("the cards", () => {
   const cards = buildCards(parseHero(raw), xt, scope);
+  const matchCards = buildCards(parseHero(matchFixture), xt);
 
-  it("keep the five tactics and add three more, each tied to an example", () => {
+  it("keep only tactics at the top level, each tied to an example", () => {
     expect(cards.map((c) => c.id)).toEqual([...CARD_IDS]);
-    expect(CARD_IDS).toEqual([
-      "high_press",
-      "decisions",
-      "corners",
-      "shot_quality",
-      "progression",
-      "counter_attack",
-      "build_up",
-      "transition",
-    ]);
+    expect(CARD_IDS).toEqual(["high_press", "counter_attack", "build_up", "transition", "corners"]);
     expect(cards.map((c) => c.moment.scenario)).toEqual([
       "press_escape",
+      null,
       "press_escape",
+      null,
       "corner_blind_side",
-      "far_post_finish",
-      "blind_side_run",
-      null,
-      "press_escape",
-      null,
     ]);
   });
 
-  it("give every metric a definition and a source", () => {
-    for (const c of cards) {
+  it("put decisions, progression and shot quality under tactics, with explanations and sources", () => {
+    const by = Object.fromEntries(cards.map((c) => [c.id, c]));
+    expect(by.high_press.metrics.map((m) => m.label)).toContain("Decisions under pressure");
+    const counter = matchCards.find((c) => c.id === "counter_attack")!;
+    expect(counter.metrics.map((m) => m.label)).toEqual(
+      expect.arrayContaining(["Progression · xT gained", "Shot quality · xG"]),
+    );
+    expect(by.build_up.metrics.map((m) => m.label)).toEqual(
+      expect.arrayContaining(["Progression · xT gained", "Decisions under pressure"]),
+    );
+    const corners = matchCards.find((c) => c.id === "corners")!;
+    expect(corners.metrics.map((m) => m.label)).toContain("Shot quality · shots from corners · xG");
+    for (const c of [...cards, ...matchCards]) {
       for (const m of c.metrics) {
         expect(m.definition.length, `${c.id} / ${m.label}`).toBeGreaterThan(20);
+        expect(m.pro.length, `${c.id} / ${m.label} Pro`).toBeGreaterThan(20);
+        expect(m.plain.length, `${c.id} / ${m.label} Plain`).toBeGreaterThan(20);
         expect(["sim", "tracking"]).toContain(m.source);
       }
     }
@@ -102,18 +105,15 @@ describe("the cards", () => {
     expect(press.limits).toMatch(/interceptions only/);
   });
 
-  it("measure each card on its own moment: the bundled passes, the press's regain, the goal's shot", () => {
+  it("measure a tactic and all its parameters on the same scope", () => {
     const by = Object.fromEntries(cards.map((c) => [c.id, c]));
-    expect(by.progression.metrics[0].values).toEqual(["2 · 2", "0 · 0"]);
-    expect(by.progression.watch?.frame).toBe(75); // the long pass to the runner
-    // The page is on blind_side_run, which has no regains and no shots: those cards are not.
+    const buildProgression = by.build_up.metrics.find((m) => m.label.startsWith("Progression"))!;
+    expect(buildProgression.values).toHaveLength(2);
     expect(by.high_press.metrics[0].label).toBe("Regains");
     expect(by.high_press.metrics[0].values).not.toEqual(["0", "0"]);
     expect(by.high_press.measured).toMatch(/Under pressure \(press_escape\)/);
-    expect(by.shot_quality.empty).toBeNull();
-    expect(by.shot_quality.metrics[0].values).toEqual(["1", "0"]);
-    expect(by.shot_quality.measured).toMatch(/The goal \(far_post_finish\)/);
-    expect(by.decisions.watch).toBeNull(); // another moment's clock
+    expect(by.build_up.measured).toMatch(/Under pressure \(press_escape\)/);
+    expect(by.high_press.metrics.find((m) => m.label === "Decisions under pressure")).toBeDefined();
   });
 
   it("keeps the whole-match fallback scope to one clause", () => {
@@ -130,55 +130,72 @@ describe("the cards", () => {
   });
 
   it("print the xG model's constants from the code that computes it", () => {
-    const xg = cards.find((c) => c.id === "shot_quality")!.metrics.find((m) => m.label === "xG")!;
+    const withCounter = matchCards.find((c) => c.id === "counter_attack")!;
+    const xg = withCounter.metrics.find((m) => m.label === "Shot quality · xG")!;
     for (const k of [XG_CAP, XG_PEAK, XG_D0, XG_SCALE]) expect(xg.definition).toContain(String(k));
     expect(distanceXg(XG_D0)).toBeCloseTo(XG_PEAK);
   });
 
   it("wait for the xT grid rather than invent progression", () => {
-    const p = buildCards(parseHero(raw), null).find((c) => c.id === "progression")!;
-    expect(p.empty).toMatch(/loading/);
+    const counter = buildCards(parseHero(matchFixture), null).find(
+      (c) => c.id === "counter_attack",
+    )!;
+    expect(counter.empty).toMatch(/loading/);
   });
 
-  it("link to the moment and to its With / Without comparison", () => {
-    expect(momentHref("progression")).toBe("/?intro=0");
-    expect(compareHref("progression")).toBe("/?intro=0&run=counterfactual&at=decision");
+  it("link every tactic to its moment and With / Without comparison", () => {
+    expect(momentHref("build_up")).toBe("/?match=press_escape-0&intro=0");
+    expect(compareHref("build_up")).toBe(
+      "/?match=press_escape-0&intro=0&run=counterfactual&at=decision",
+    );
     expect(compareHref("high_press")).toBe(
       "/?match=press_escape-0&intro=0&run=counterfactual&at=decision",
     );
     // A moment told inside the match opens through the match; its run toggle does the rest.
     expect(compareHref("corners")).toBe("/?match=match-1&moment=corner_blind_side");
-    expect(momentHref("shot_quality")).toBe("/?match=match-1&moment=far_post_finish");
+    expect(compareHref("counter_attack")).toBe(
+      "/?match=match-1&intro=0&run=counterfactual&at=decision",
+    );
   });
 });
 
 describe("the Tactics lab panel", () => {
   const html = render(hero(), <TacticsLabPanel xt={xt} scope={scope} />);
 
-  it("is a chapter you can jump to", () => {
+  it("puts five tactic tabs above the high-press parameter rows", () => {
     expect(html).toContain('id="tactics-lab"');
     expect(html).toContain("Why tactics");
     for (const t of [
       "High press",
-      "Decisions under pressure",
-      "Corners",
-      "Shot quality",
-      "Progression",
       "Counter-attack",
-      "Press-breaking build-up",
-      "After losing the ball",
+      "Possession play / breaking the press",
+      "Transition after losing the ball",
+      "Set pieces (corners)",
     ]) {
-      expect(html).toContain(t);
+      expect(html).toContain(`data-tactic="${t}"`);
     }
+    for (const p of [
+      "Regains",
+      "High regains",
+      "PPDA",
+      "Decisions under pressure",
+      "Shots within 10 s of a high regain · xG",
+    ]) {
+      expect(html).toContain(p);
+    }
+    expect(html.indexOf('aria-label="Tactics"')).toBeLessThan(
+      html.indexOf('data-card="high_press"'),
+    );
   });
 
-  it("folds each metric's definition under its name and keeps every source chip", () => {
+  it("folds each parameter definition under its row and keeps its source chip", () => {
     const session = hero();
     session.breakdown.set({ persona: "analyst" });
     const pro = render(session, <TacticsLabPanel xt={xt} scope={scope} />);
     expect(pro).toContain("<summary>What it counts</summary>");
     expect(pro).toContain("Opponent passes per defensive action");
-    expect(pro).not.toContain("Definition under each name");
+    expect(pro).toContain('data-parameter="decisions"');
+    expect(pro).toContain('class="lab-parameter-explanation"');
     expect(pro).toContain('data-source="tracking"');
     expect(pro).toContain('data-source="sim"');
     expect(pro).toContain("Measured over this moment");

@@ -1,27 +1,22 @@
-// Which moment a Tactics card measures (SPEC 4.8, 7). A card is told on the hero moment that shows
-// its tactic, whichever moment the page opened on: High press and Decisions under pressure on
-// press_escape, Corners on corner_blind_side, Shot quality on far_post_finish, Progression on
-// blind_side_run. Counter-attack, build-up and transition prefer the stitched match itself; the
-// build-up links to press_escape. Those exports come from the service the page already talks to:
-// no model, no new data. Offline only the bundled moment exists, and a card for another moment
-// says so instead of printing zeros.
+// Which moment a tactic and all its parameter rows measure (SPEC 4.8, 7). High press and
+// possession use press_escape, set pieces use corner_blind_side; counter-attack, possession and
+// transition prefer the stitched match itself. Those exports come from the service the page
+// already talks to: no model, no new data. Offline only the bundled moment exists, and a tactic
+// for another moment says so instead of printing zeros.
 
 import type { Api } from "../api/client";
 import { loadScenarioHero } from "../data/load";
 import { parseHero, type Hero } from "../data/hero";
 import { FULL_MATCH } from "../moments/moments";
-import type { CardId } from "./cards";
+import type { TacticId } from "./cards";
 
-/** The hero moment that shows each card's tactic. */
-export const CARD_SCENARIO: Record<CardId, string> = {
+/** The hero moment that shows each tactic. */
+export const CARD_SCENARIO: Record<TacticId, string> = {
   high_press: "press_escape",
-  decisions: "press_escape",
-  corners: "corner_blind_side",
-  shot_quality: "far_post_finish",
-  progression: "blind_side_run",
   counter_attack: "press_escape",
   build_up: "press_escape",
   transition: "press_escape",
+  corners: "corner_blind_side",
 };
 
 /** What the page has of the cards' moments: the heroes loaded so far, by scenario, and the

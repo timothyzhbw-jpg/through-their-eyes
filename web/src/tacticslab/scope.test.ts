@@ -59,45 +59,35 @@ describe("isBlank", () => {
   });
 });
 
-describe("a card's moment", () => {
-  it("is the one that shows its tactic, whichever moment the page opened on", () => {
+describe("a tactic's moment", () => {
+  it("loads only the moments the five tactics need", () => {
     expect(CARD_SCENARIO).toEqual({
       high_press: "press_escape",
-      decisions: "press_escape",
-      corners: "corner_blind_side",
-      shot_quality: "far_post_finish",
-      progression: "blind_side_run",
       counter_attack: "press_escape",
       build_up: "press_escape",
       transition: "press_escape",
+      corners: "corner_blind_side",
     });
-    expect(missingScenarios(bundled()).sort()).toEqual([
-      "corner_blind_side",
-      "far_post_finish",
-      "press_escape",
-    ]);
-    expect(missingScenarios(press())).toContain("blind_side_run");
+    expect(missingScenarios(bundled()).sort()).toEqual(["corner_blind_side", "press_escape"]);
+    expect(missingScenarios(press())).toEqual(["corner_blind_side"]);
     expect(missingScenarios(press())).not.toContain("press_escape");
   });
 
-  it("High press and Decisions are measured on the pressure moment, labelled so", () => {
+  it("measures High press and its decision parameter on the pressure moment", () => {
     const cards = byId(buildCards(bundled(), xt, scopeOf({ press_escape: press() })));
-    for (const id of ["high_press", "decisions"] as const) {
+    for (const id of ["high_press", "build_up"] as const) {
       expect(cards[id].measured, id).toMatch(/Under pressure \(press_escape\)/);
       expect(cards[id].scope).toBe("this moment");
+      expect(cards[id].metrics.some((m) => m.label === "Decisions under pressure")).toBe(true);
     }
-    // Progression stays on the page's own moment, the one that shows it.
-    expect(cards.progression.measured).toMatch(/The look \(blind_side_run\)/);
-    expect(cards.progression.metrics[0].values).toEqual(["2 · 2", "0 · 0"]);
-    expect(cards.decisions.metrics.length).toBeGreaterThan(0);
   });
 
   it("is not watchable on the page's clock when it is another moment's", () => {
     const cards = byId(buildCards(bundled(), xt, scopeOf({ press_escape: press() })));
-    expect(cards.decisions.watch).toBeNull();
-    expect(cards.decisions.here).toBe(false);
-    expect(cards.progression.watch).not.toBeNull();
-    expect(cards.progression.here).toBe(true);
+    expect(cards.high_press.watch).toBeNull();
+    expect(cards.high_press.here).toBe(false);
+    expect(cards.build_up.watch).toBeNull();
+    expect(cards.build_up.here).toBe(false);
   });
 
   it("measures the pressure moment as its own page does", () => {
@@ -147,7 +137,7 @@ describe("a card with nothing to lead with", () => {
     expectNoBlankLead([c]);
   });
 
-  it("says why when nothing at all is measured, and shows no table", () => {
+  it("keeps an exported decision even when the press has no regain", () => {
     const empty = withEvents(press(), []);
     const c = byId(buildCards(bundled(), xt, scopeOf({ press_escape: empty }))).high_press;
     expect(c.empty).toBeTruthy();
@@ -156,8 +146,9 @@ describe("a card with nothing to lead with", () => {
       [...forcedEvents("pass:H11")].filter((e) => e.type === "pass"),
     );
     const d = byId(buildCards(bundled(), xt, scopeOf({ press_escape: quiet }))).high_press;
-    expect(d.empty).toMatch(/Nothing to measure on Under pressure \(press_escape\)/);
-    expect(d.empty).toMatch(/NUMBERS\.md M4/);
+    expect(d.empty).toBeNull();
+    expect(d.metrics.find((m) => m.id === "decisions")!.values.every(isBlank)).toBe(false);
+    expect(d.metrics.find((m) => m.id === "regains")!.zeroWhy).toMatch(/NUMBERS\.md M4/);
   });
 
   it("puts the metrics that have a value first, and says why each zero is zero", () => {

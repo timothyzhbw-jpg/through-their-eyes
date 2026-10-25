@@ -1,8 +1,7 @@
-// The Tactics lab (SPEC 4.8, 7): why common tactics work, told with this match's own synthetic
-// data. A chapter of the moment page and of the match page: the original five cards plus
-// counter-attack, press-breaking build-up and transition, each with Pro and Plain explanations,
-// metric definitions and sources, and a link to the example. Everything is computed in the browser
-// from the export on screen and the bundled xT grid: no model call, no service.
+// The Tactics lab (SPEC 4.8, 7): five tactic tabs with their parameters underneath. Each parameter
+// row has Pro and Plain explanations, a collapsed definition and a source; each tactic keeps its
+// moment links and limitations. Everything is computed in the browser from the export on screen,
+// its loaded match scope and the bundled xT grid: no model call, no new service.
 
 import { useEffect, useId, useMemo, useState } from "react";
 import type { Hero } from "../data/hero";
@@ -12,12 +11,11 @@ import { Chapter, Title } from "../ui/Chapter";
 import { SourceChip } from "../provenance/SourceChip";
 import { SOURCES, computed } from "../provenance/source";
 import {
-  ORIGINAL_CARDS,
   buildCards,
   compareHref,
   momentHref,
   type LabCard,
-  type CardId,
+  type TacticId,
   type Metric,
 } from "./cards";
 import { lanesAt, laneCounts, OPEN_P, type Lane } from "./lanes";
@@ -92,11 +90,14 @@ export function useScope(): Scope {
 const sourceTitle = (m: Metric) =>
   m.sourceNote ? computed(m.sourceNote) : SOURCES[m.source].title;
 
-function MetricRow({ m, split }: { m: Metric; split: boolean }) {
+type LabVersion = "pro" | "plain";
+
+function MetricRow({ m, split, version }: { m: Metric; split: boolean; version: LabVersion }) {
   return (
-    <tr>
+    <tr data-parameter={m.id}>
       <th scope="row">
         {m.label}
+        <p className="lab-parameter-explanation">{version === "pro" ? m.pro : m.plain}</p>
         <details className="how lab-definition">
           <summary>What it counts</summary>
           <span className="lab-def">{m.definition}</span>
@@ -107,19 +108,21 @@ function MetricRow({ m, split }: { m: Metric; split: boolean }) {
           )}
         </details>
       </th>
-      {m.values.map((v, i) => (
-        <td key={i} data-team={split ? i : undefined}>
-          {v}
-        </td>
-      ))}
+      {split && m.values.length === 1 ? (
+        <td colSpan={2}>{m.values[0]}</td>
+      ) : (
+        m.values.map((v, i) => (
+          <td key={i} data-team={split ? i : undefined}>
+            {v}
+          </td>
+        ))
+      )}
       <td className="lab-source">
         <SourceChip kind={m.source} title={sourceTitle(m)} spoken />
       </td>
     </tr>
   );
 }
-
-type LabVersion = "pro" | "plain";
 
 function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) => void }) {
   const split = card.metrics.some((m) => m.values.length > 1);
@@ -162,20 +165,18 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
         aria-labelledby={tabId(version)}
         data-version={version}
       >
-        {(version === "pro" || card.id !== "progression" || !moves.length) && (
-          <p className="lab-idea">{version === "pro" ? card.pro : card.plain}</p>
-        )}
-        {version === "pro" && !card.empty && (
+        <p className="lab-idea">{version === "pro" ? card.pro : card.plain}</p>
+        {!card.empty && (
           <div
             className="table-wrap"
             role="region"
             tabIndex={0}
-            aria-label={`${card.title} numbers`}
+            aria-label={`${card.title} parameters`}
           >
             <table className="data-table lab-table">
               <thead>
                 <tr>
-                  <th scope="col">Measured over {card.scope}</th>
+                  <th scope="col">Measured over {card.scope} · parameter</th>
                   {split ? (
                     <>
                       <th scope="col" data-team="0">
@@ -195,13 +196,13 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
               </thead>
               <tbody>
                 {card.metrics.map((m) => (
-                  <MetricRow key={m.label} m={m} split={split} />
+                  <MetricRow key={m.id} m={m} split={split} version={version} />
                 ))}
               </tbody>
             </table>
           </div>
         )}
-        {moves.length > 0 && (version === "pro" || card.id === "progression") && (
+        {moves.length > 0 && !card.empty && (
           <XtMoveExplain
             moves={moves}
             owner="their"
@@ -213,16 +214,14 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
         <a className="btn" href={card.href ?? momentHref(card.id)} data-link="moment">
           {card.here ? "This is the moment: reload it" : `Open the moment · ${card.moment.label}`}
         </a>
-        {ORIGINAL_CARDS.has(card.id) && (
-          <a
-            className="btn"
-            href={compareHref(card.id)}
-            data-link="compare"
-            title="The moment with the look, then without it (the With / Without toggle)"
-          >
-            With / without the look
-          </a>
-        )}
+        <a
+          className="btn"
+          href={compareHref(card.id)}
+          data-link="compare"
+          title="The moment with the look, then without it (the With / Without toggle)"
+        >
+          With / without the look
+        </a>
         {card.watch && (
           <button type="button" className="btn" onClick={() => onWatch(card.watch!.frame)}>
             {card.watch.label}
@@ -361,14 +360,13 @@ export function TacticsLabPanel({
   const asked = useScope();
   const scope = injectedScope ?? asked;
   const cards = useMemo(() => buildCards(view.hero, grid, scope), [view.hero, grid, scope]);
-  const [picked, setPicked] = useState<CardId>("high_press");
+  const [picked, setPicked] = useState<TacticId>("high_press");
   const card = cards.find((c) => c.id === picked) ?? cards[0];
-  // The board is the Decisions card's moment's: the page's own, or the one loaded for the card;
-  // with no service the bundled moment is all there is.
+  // The board belongs to the press_escape decision used by the pressing and possession tactics.
   const laneHero =
-    view.hero.kind === "match" || view.hero.scenario === CARD_SCENARIO.decisions
+    view.hero.kind === "match" || view.hero.scenario === CARD_SCENARIO.high_press
       ? view.hero
-      : (scope.heroes[CARD_SCENARIO.decisions] ?? (scope.online ? null : view.hero));
+      : (scope.heroes[CARD_SCENARIO.high_press] ?? (scope.online ? null : view.hero));
   const watch = (frame: number) => {
     window.scrollTo({ top: 0 }); // the replay plays at the top
     view.controls.seek(frame);
@@ -379,17 +377,18 @@ export function TacticsLabPanel({
         className="tactics-lab"
         kicker={kicker}
         title={<Title lead="Why tactics" em="work." />}
-        lede={`${cards.length} common tactics, each measured on the synthetic data of ${view.hero.kind === "match" ? "this match" : "the moment that shows it"}, with Pro and Plain explanations. Every number says what it is and where it comes from; every card opens the moment that shows it.`}
+        lede={`${cards.length} common tactics, each measured on the synthetic data of ${view.hero.kind === "match" ? "this match" : "the moment that shows it"}. Choose a tactic, then read its parameters in Pro or Plain; every row keeps its definition and source, and every tactic opens its moment.`}
         label="Tactics lab"
       >
-        <nav className="pick-row" aria-label="Tactic cards">
+        <nav className="pick-row" aria-label="Tactics">
           {cards.map((c) => (
             <button
               key={c.id}
               type="button"
               className="btn"
+              data-tactic={c.title}
               aria-pressed={c.id === card.id}
-              onClick={() => setPicked(c.id)}
+              onClick={() => setPicked(c.id as TacticId)}
             >
               {c.title}
             </button>
