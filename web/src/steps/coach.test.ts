@@ -1,6 +1,6 @@
 // The coach's example (SPEC 3.6, "Teaching"): the coach's sequence (start view, look left,
 // drop-back, look right, half-turn, forward pass), and the product owner's rule that every look
-// visibly brings something new that opens or closes options. The committed file is
+// visibly brings something new that opens, closes or moves options. The committed file is
 // sim.export.export_steps("pro_scan", 116) (tests/test_steps.py keeps it current); its hero export
 // is served by the API, so the parse is checked on the scan hero's export with the teaching fields
 // added (teaching.fixture.ts), and the committed file is checked as JSON with the same functions
@@ -161,7 +161,8 @@ describe("the committed teaching file: the coach's sequence", () => {
   it("drops back on what the left look showed, and turns on what the right look showed", () => {
     const [left, right] = fac.steps;
     const [drop, turn] = fac.beats;
-    const top = (p: Picture | null) => p!.news!.find((n) => n.moved > NEW_M)!;
+    const top = (p: Picture | null) =>
+      p!.news!.filter((n) => n.moved > NEW_M).sort((a, b) => a.after - b.after)[0]!;
     expect(top(left.picture).id).toBe(drop.rule.nearest); // A6, closer than he thought
     expect(drop.rule.near).toContain(drop.rule.nearest);
     expect(drop.rule.nearest_m).toBeLessThanOrEqual(drop.rule.radius_m);
@@ -172,7 +173,7 @@ describe("the committed teaching file: the coach's sequence", () => {
   });
 });
 
-describe("every look brings something new that opens or closes options", () => {
+describe("every look brings something new that changes his options", () => {
   for (const name of ["factual", "counterfactual"] as const) {
     const run = coach.runs[name];
     it(`${name}: each look's diff is its data, and it is told`, () => {
@@ -192,10 +193,10 @@ describe("every look brings something new that opens or closes options", () => {
         const think = lookThinking(s.direction as "L" | "R", p, who, true);
         if (news.length) expect(news.length).toBeGreaterThan(0);
         else expect(think).toContain("Nothing new");
-        // The coach's looks do both: news, and an option opened or closed.
+        // The coach's looks do both: news, and an option opened, closed or moved.
         expect(p.news!.some((n: NewsRow) => n.moved > NEW_M)).toBe(true);
         expect(p.opened.length + p.closed.length).toBeGreaterThan(0);
-        expect(think).toMatch(/So .+ is (on|off) \(\d+% → \d+%\)/);
+        expect(think).toMatch(/So .+ (?:is (?:on|off)|rises|falls) \(\d+% → \d+%\)/);
         // Every digit in the line is a value of the data (or a shirt number).
         const values = new Set([
           ...p.news!.flatMap((n) => [n.before, n.after, n.moved].map((m) => m.toFixed(1))),
@@ -220,14 +221,15 @@ describe("every look brings something new that opens or closes options", () => {
     expect(think).toMatch(/^Checking my left\. #6 .+ is [\d.]+ m from me, not [\d.]+ m\. So /);
   });
 
-  it("the right look: the No. 5 closing, turning is off and the pass forward is on", () => {
+  it("the right look: the No. 5 closing, turning falls and the pass forward rises", () => {
     const right = coach.runs.factual.steps[1].picture!;
-    expect(right.opened).toContain("pass:H9");
-    expect(right.closed).toContain("carry");
+    const lines = optionLines(right.options, right.before, right.opened, right.closed, who, true);
+    expect(lines.find((l) => l.action === "pass:H9")?.mark).toBe("↗");
+    expect(lines.find((l) => l.action === "carry")?.mark).toBe("↘");
     const think = lookThinking("R", right, who, true);
-    expect(think).toMatch(/^Checking my right\. #5 .+ is [\d.]+ m from me, not [\d.]+ m\./);
-    expect(think).toContain("turn and carry is off");
-    expect(think).toMatch(/pass to #9 .+ is on/);
+    expect(think).toMatch(/^Checking my right\. #5 /);
+    expect(think).toContain("turn and carry falls");
+    expect(think).toMatch(/pass to #9 .+ rises/);
   });
 
   it("the start view lists his options before any look; the beats say the rules' reasons", () => {

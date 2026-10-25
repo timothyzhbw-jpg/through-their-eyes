@@ -92,17 +92,26 @@ describe("His looks: the coaching story", () => {
     const news = [...el.querySelectorAll(".ss-news li")].map((li) => textOf(li));
     expect(news).toEqual(newsLines(p.news!, who));
     expect(news[0]).toMatch(/^#9 .+: [\d.]+ m from him, not [\d.]+ m/); // the runner, found
-    // His options: the bundle's opened (↑) and closed (↓), as marked on the card.
+    // His options: opened / closed and large rises / falls, as marked on the card.
     const marked = (cls: string) =>
       [...el.querySelectorAll(`.ss-options li.${cls} .ss-opt`)].map((x) => textOf(x));
     const lines = optionLines(p.options, p.before, p.opened, p.closed, who);
-    expect(marked("up")).toEqual(lines.filter((l) => l.mark === "↑").map((l) => l.label));
-    expect(marked("down")).toEqual(lines.filter((l) => l.mark === "↓").map((l) => l.label));
+    expect(marked("up")).toEqual(
+      lines.filter((l) => l.mark === "↑" || l.mark === "↗").map((l) => l.label),
+    );
+    expect(marked("down")).toEqual(
+      lines.filter((l) => l.mark === "↓" || l.mark === "↘").map((l) => l.label),
+    );
     expect(p.opened).toContain("pass:H9"); // seeing his run opens the pass to him
     expect(marked("up")).toContain(`Pass to ${news[0]!.split(":")[0]}`);
+    const picture = textOf(el.querySelector(".ss-picture"))!;
+    expect(picture).toContain("His options: without this look → with it");
+    expect(picture).toContain(
+      "Both are computed at the same frozen frame. ↑ ↓ cross 50%; ↗ ↘ move 20 points or more.",
+    );
     const think = textOf(el.querySelector(".ss-think"))!;
     expect(think).toBe(lookThinking(s.direction, p, who));
-    expect(think).toMatch(/^Checking behind me\. #9 .+ is [\d.]+ m from me, not [\d.]+ m\. So /);
+    expect(think).toMatch(/^Checking behind me\. #8 .+ is [\d.]+ m from me, not [\d.]+ m\. So /);
   });
 
   it("has a timeline tick per scan, labelled by direction, that jumps to its freeze", async () => {

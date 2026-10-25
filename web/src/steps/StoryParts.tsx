@@ -120,9 +120,9 @@ export function LookStoryBlock({ st, step }: { st: StepThrough; step: Step }) {
 }
 
 /** What a frozen step changed and what he made of it: for a look, who is new in his picture (or
- * that nothing is); his options now on his belief, each with its believed success before and now,
- * ↑ opened and ↓ closed; and one line of what he is thinking that links the two. The start view
- * lists his options before any look. Nothing for a missing look or the decision. */
+ * that nothing is); his options on his belief, compared at the same frame with and without the look,
+ * ↑ opened, ↓ closed, ↗ rose and ↘ fell; and one line of what he is thinking that links the two.
+ * The start view lists his options before any look. Nothing for a missing look or the decision. */
 export function PictureBlock({ st, step }: { st: StepThrough; step: Step }) {
   const s = useStore(st.state, (x) => x);
   const hero = st.session.hero;
@@ -147,16 +147,37 @@ export function PictureBlock({ st, step }: { st: StepThrough; step: Step }) {
         </>
       )}
       <p className="ss-label">{view.optionsLabel}</p>
+      {view.optionsNote && <p className="ss-source">{view.optionsNote}</p>}
       <ul className="ss-options">
         {view.options.map((o) => (
-          <li key={o.action} className={o.mark === "↑" ? "up" : o.mark === "↓" ? "down" : ""}>
+          <li
+            key={o.action}
+            className={
+              o.mark === "↑" || o.mark === "↗"
+                ? "up"
+                : o.mark === "↓" || o.mark === "↘"
+                  ? "down"
+                  : ""
+            }
+          >
             <span className="ss-opt">{o.label}</span>
             <span className="ss-p">
               {o.before !== null && view.compare ? `${percent(o.before)} → ` : ""}
               {percent(o.now)}
             </span>
             {o.mark && (
-              <b className="ss-mark" aria-label={o.mark === "↑" ? "opened" : "closed"}>
+              <b
+                className="ss-mark"
+                aria-label={
+                  o.mark === "↑"
+                    ? "opened"
+                    : o.mark === "↓"
+                      ? "closed"
+                      : o.mark === "↗"
+                        ? "rose"
+                        : "fell"
+                }
+              >
                 {o.mark}
               </b>
             )}

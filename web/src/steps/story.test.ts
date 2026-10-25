@@ -9,7 +9,7 @@ import raw from "../../public/data/hero_seed3.json";
 import stepsJson from "../../public/data/steps_seed3.json";
 import { parseHero, type Hero } from "../data/hero";
 import { heroMoment } from "../plan/moment";
-import { parseSteps, type LookStep } from "./steps";
+import { parseSteps, type LookStep, type OptionRow } from "./steps";
 import {
   ARC_RADIUS_M,
   BEHIND_MIN,
@@ -21,11 +21,16 @@ import {
   halfTurnArc,
   HALF_TURN_CAPTION,
   lookStory,
+  optionLines,
+  optionsClause,
+  personLookup,
   PUBLISHED_SCANS,
   scanDirection,
   scansBeforeReceiving,
+  SHIFT,
   thinkingCaption,
   timeline,
+  type OptionLine,
 } from "./story";
 
 const hero = parseHero(raw);
@@ -60,6 +65,73 @@ function allowedFromData(name: "factual" | "counterfactual", frames: number[]) {
   for (let k = 0; k <= 22; k++) ok.add(String(k)); // counts and look numbers
   return ok;
 }
+
+describe("an option's change", () => {
+  const who = personLookup(hero);
+  const row = (action: string, p: number): OptionRow => ({ action, p, prob: 0, value: p });
+
+  it("marks rises and falls at exactly SHIFT, but not below it, and keeps marked rows", () => {
+    const before = [
+      row("carry", 0.25),
+      row("pass:H9", 0.45),
+      row("pass:H4", 0.25),
+      row("pass:H7", 0.45),
+      row("pass:H6", 0.45),
+      row("pass:H5", 0.5),
+    ];
+    const options = [
+      row("carry", 0.25 + SHIFT),
+      row("pass:H9", 0.45 - SHIFT),
+      row("pass:H4", 0.25 + SHIFT - 0.001),
+      row("pass:H7", 0.45 - SHIFT + 0.001),
+      row("pass:H6", 0.45 + SHIFT),
+      row("pass:H5", 0.5),
+    ];
+    const lines = optionLines(options, before, [], [], who, true);
+    expect(lines.map((l) => [l.action, l.mark])).toEqual([
+      ["carry", "↗"],
+      ["pass:H9", "↘"],
+      ["pass:H4", ""],
+      ["pass:H7", ""],
+      ["pass:H6", "↗"],
+    ]);
+  });
+
+  it("keeps opened and closed instead of rise and fall marks", () => {
+    const options = [row("carry", 0.95), row("pass:H9", 0.05)];
+    const before = [row("carry", 0.25), row("pass:H9", 0.85)];
+    const lines = optionLines(options, before, ["carry"], ["pass:H9"], who);
+    expect(lines.map((l) => l.mark)).toEqual(["↑", "↓"]);
+  });
+
+  it("does not mark a rise or fall without a baseline for that action", () => {
+    const options = [row("carry", 0.95)];
+    expect(optionLines(options, null, [], [], who)[0]!.mark).toBe("");
+    expect(optionLines(options, [], [], [], who)[0]!.mark).toBe("");
+  });
+
+  it("orders negative then positive changes by size, with two of each and the remainder", () => {
+    const line = (
+      label: string,
+      before: number,
+      now: number,
+      mark: OptionLine["mark"],
+    ): OptionLine => ({ action: label, label, before, now, mark });
+    const lines = [
+      line("Turn and carry", 0.79, 0.57, "↘"),
+      line("Pass to #9", 0.53, 0.85, "↗"),
+      line("Pass to #7", 0.5, 0.4, "↘"),
+      line("Back pass to #4", 0.6, 0.2, "↓"),
+      line("Pass to #6", 0.2, 0.51, "↑"),
+      line("Pass to #5", 0.2, 0.4, "↗"),
+    ];
+    expect(optionsClause(lines, "So")).toBe(
+      "So back pass to #4 is off (60% → 20%), turn and carry falls (79% → 57%), " +
+        "pass to #9 rises (53% → 85%), pass to #6 is on (20% → 51%), and 2 more.",
+    );
+    expect(optionsClause([], "So")).toBe("No option opens, closes or moves much.");
+  });
+});
 
 describe("direction against his body", () => {
   it("classifies forward, left, right and behind from the head yaw relative to the body", () => {
