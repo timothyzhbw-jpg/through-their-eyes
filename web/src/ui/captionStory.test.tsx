@@ -66,6 +66,18 @@ describe("the story so far", () => {
     expect(page.querySelector(".stage-caption .caption")).not.toBeNull();
   });
 
+  it("shows before the breakdown arrives, with what fills it", () => {
+    window.innerWidth = 1440;
+    const session = offline();
+    session.breakdown.set({ narration: null });
+    const page = mount(session, <CaptionStory />);
+    expect(story(page)).not.toBeNull();
+    expect(text(story(page))).toContain(
+      "Get the breakdown, and its lines collect here as it plays.",
+    );
+    expect(lines(page)).toHaveLength(0);
+  });
+
   it("accumulates captioned lines oldest first, highlights the current one, and keeps its tick", () => {
     window.innerWidth = 1440;
     const session = offline();

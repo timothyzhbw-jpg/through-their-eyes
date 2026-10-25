@@ -228,50 +228,57 @@ export function CaptionStory() {
     if (list.current) list.current.scrollTop = list.current.scrollHeight;
   }, [entries, lineId]);
 
-  if (!on || !desktop || !narration) return null;
+  // Shown before the breakdown too, so the picture keeps one width on every moment: the two
+  // stand-alone heroes wait for Get breakdown, the ones inside a match open theirs at once.
+  if (!on || !desktop) return null;
   return (
     <aside className="caption-story" aria-label="The story so far">
       <h2>The story so far</h2>
       {entries.length === 0 && (
-        <p className="caption-story-empty">The commentary's lines collect here as it plays.</p>
+        <p className="caption-story-empty">
+          {narration
+            ? "The commentary's lines collect here as it plays."
+            : "Get the breakdown, and its lines collect here as it plays."}
+        </p>
       )}
       <ol ref={list}>
-        {entries.map((entry) => {
-          const line = lineOf(narration, entry.id);
-          if (!line) return null;
-          const verified = isVerified(narration, line);
-          return (
-            <li
-              key={entry.id}
-              data-line={line.id}
-              className={line.id === lineId ? "caption-story-line now" : "caption-story-line"}
-              aria-current={line.id === lineId ? "true" : undefined}
-            >
-              <span className="caption-story-text">
-                <LineText
-                  text={line.text}
-                  verified={verified}
-                  claims={lineClaims(narration, line)}
-                />
-                {line.claims.length > 0 && (
-                  <button
-                    type="button"
-                    className={
-                      verified
-                        ? "caption-more caption-evidence check"
-                        : "caption-more caption-evidence"
-                    }
-                    aria-label="Open the evidence for this line"
-                    aria-expanded={open === line.id}
-                    onClick={() => controls.openLine(line.id)}
-                  >
-                    {verified ? <CheckIcon /> : "Evidence"}
-                  </button>
-                )}
-              </span>
-            </li>
-          );
-        })}
+        {narration &&
+          entries.map((entry) => {
+            const line = lineOf(narration, entry.id);
+            if (!line) return null;
+            const verified = isVerified(narration, line);
+            return (
+              <li
+                key={entry.id}
+                data-line={line.id}
+                className={line.id === lineId ? "caption-story-line now" : "caption-story-line"}
+                aria-current={line.id === lineId ? "true" : undefined}
+              >
+                <span className="caption-story-text">
+                  <LineText
+                    text={line.text}
+                    verified={verified}
+                    claims={lineClaims(narration, line)}
+                  />
+                  {line.claims.length > 0 && (
+                    <button
+                      type="button"
+                      className={
+                        verified
+                          ? "caption-more caption-evidence check"
+                          : "caption-more caption-evidence"
+                      }
+                      aria-label="Open the evidence for this line"
+                      aria-expanded={open === line.id}
+                      onClick={() => controls.openLine(line.id)}
+                    >
+                      {verified ? <CheckIcon /> : "Evidence"}
+                    </button>
+                  )}
+                </span>
+              </li>
+            );
+          })}
       </ol>
     </aside>
   );
