@@ -187,6 +187,23 @@ describe("voice", () => {
     expect(failing.busy).toBe(false);
   });
 
+  it("does not start a clip whose synthesis finishes after stop", async () => {
+    const cue = { line: "L1", speaker: "pbp", t: 0, voice: "v", ssml: "<speak/>", cache_key: "k" };
+    let resolveClip: (blob: Blob) => void = () => {};
+    const audio = fakeAudio();
+    const voice = new VoicePlayer(
+      () => new Promise<Blob>((resolve) => (resolveClip = resolve)),
+      audio,
+    );
+    voice.setOn(true);
+    const loading = voice.say(cue);
+    voice.stop();
+    resolveClip(new Blob(["RIFF"]));
+    await loading;
+    expect(audio.played).toEqual([]);
+    expect(voice.state.get()).toMatchObject({ status: "idle", line: null });
+  });
+
   it("reports a failed synthesis and tries again next time", async () => {
     let fail = true;
     const asked: string[] = [];

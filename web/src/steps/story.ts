@@ -174,8 +174,8 @@ export const lookDirection = (hero: Hero, run: Run, step: LookStep): ScanDirecti
 // ---------- new information → his options (a frozen step's picture) ----------
 // Every look must visibly bring something new and show what it did to his options. The bundle
 // carries, per frozen step, who is new in his picture and his options on his belief (the decision
-// model, read only, explain/belief_options.py) before and now; the words here are templates whose
-// names, numbers and percentages are slots from that data.
+// model, read only, explain/belief_options.py) with and without this look at the same frozen frame;
+// the words here are templates whose names, numbers and percentages are slots from that data.
 
 /** A player as the story names him, by id. */
 export type PersonOf = (id: string) => Person;
@@ -192,19 +192,22 @@ export function optionLabel(action: string, who: PersonOf, turn = false): string
   return actionLabel(action);
 }
 
+// A change of believed success this large is marked even when it does not cross 50%.
+export const SHIFT = 0.2;
+
 export interface OptionLine {
   action: string;
   label: string;
-  before: number | null; // believed success before, 0-1 (null: not playable then, or no before)
+  before: number | null; // baseline believed success, 0-1 (null: not playable, or no baseline)
   now: number;
-  mark: "↑" | "↓" | ""; // opened, closed
+  mark: "↑" | "↓" | "↗" | "↘" | ""; // opened, closed, rose, fell
 }
 
-/** How many options the card lists, best valued first; every one opened or closed is added. */
+/** How many options the card lists, best valued first; every marked one is added. */
 export const OPTIONS_SHOWN = 4;
 
-/** His options now, best valued first: the top OPTIONS_SHOWN and every one this step opened or
- * closed, each with its believed success before and now. */
+/** His options now, best valued first: the top OPTIONS_SHOWN and every marked one, each with its
+ * baseline and current believed success. For a look, both are at its freeze. */
 export function optionLines(
   options: OptionRow[],
   before: OptionRow[] | null,
@@ -214,8 +217,14 @@ export function optionLines(
   turn = false,
 ): OptionLine[] {
   const was = new Map((before ?? []).map((o) => [o.action, o.p]));
-  const marked = new Set([...opened, ...closed]);
-  const rows = options.filter((o, k) => k < OPTIONS_SHOWN || marked.has(o.action));
+  const markFor = (o: OptionRow): OptionLine["mark"] => {
+    if (opened.includes(o.action)) return "↑";
+    if (closed.includes(o.action)) return "↓";
+    const previous = before ? was.get(o.action) : undefined;
+    if (previous === undefined || Math.abs(o.p - previous) < SHIFT) return "";
+    return o.p > previous ? "↗" : "↘";
+  };
+  const rows = options.filter((o, k) => k < OPTIONS_SHOWN || markFor(o));
   const gone = (before ?? []).filter(
     (o) => closed.includes(o.action) && !options.some((x) => x.action === o.action),
   );
@@ -225,11 +234,7 @@ export function optionLines(
       label: optionLabel(o.action, who, turn),
       before: before ? (was.get(o.action) ?? null) : null,
       now: o.p,
-      mark: opened.includes(o.action)
-        ? ("↑" as const)
-        : closed.includes(o.action)
-          ? ("↓" as const)
-          : ("" as const),
+      mark: markFor(o),
     })),
     ...gone.map((o) => ({
       action: o.action,
@@ -258,14 +263,22 @@ export function newsLines(news: NewsRow[], who: PersonOf): string[] {
 }
 
 /** The second half of a thinking line: what the step did to his options. */
-function optionsClause(lines: OptionLine[], lead: string): string {
-  const say = (l: OptionLine) =>
-    `${l.label.charAt(0).toLowerCase()}${l.label.slice(1)} is ${l.mark === "↑" ? "on" : "off"} (${percent(l.before ?? 0)} → ${percent(l.now)})`;
-  const closed = lines.filter((l) => l.mark === "↓");
-  const opened = lines.filter((l) => l.mark === "↑");
-  const said = [...closed.slice(0, 2), ...opened.slice(0, 2)].map(say);
-  if (!said.length) return "No option opens or closes.";
-  const more = closed.length + opened.length - said.length;
+export function optionsClause(lines: OptionLine[], lead: string): string {
+  const say = (l: OptionLine) => {
+    const verb =
+      l.mark === "↑" ? "is on" : l.mark === "↓" ? "is off" : l.mark === "↗" ? "rises" : "falls";
+    return `${l.label.charAt(0).toLowerCase()}${l.label.slice(1)} ${verb} (${percent(l.before ?? 0)} → ${percent(l.now)})`;
+  };
+  const change = (l: OptionLine) => Math.abs(l.now - (l.before ?? 0));
+  const negative = lines
+    .filter((l) => l.mark === "↓" || l.mark === "↘")
+    .sort((a, b) => change(b) - change(a));
+  const positive = lines
+    .filter((l) => l.mark === "↑" || l.mark === "↗")
+    .sort((a, b) => change(b) - change(a));
+  const said = [...negative.slice(0, 2), ...positive.slice(0, 2)].map(say);
+  if (!said.length) return "No option opens, closes or moves much.";
+  const more = negative.length + positive.length - said.length;
   return `${lead} ${said.join(", ")}${more > 0 ? `, and ${more} more` : ""}.`;
 }
 
@@ -278,7 +291,12 @@ export function lookThinking(
   turn = false,
 ): string {
   const news = picture.news ?? [];
-  const top = news.find((n) => n.moved > NEW_M);
+  const top = news
+    .filter((n) => n.moved > NEW_M)
+    .reduce<NewsRow | null>(
+      (nearest, n) => (nearest === null || n.after < nearest.after ? n : nearest),
+      null,
+    );
   const seen = news.filter((n) => n.entered).slice(0, 2);
   const what = top
     ? `${tagOf(who(top.id))} is ${metres(top.after)} m from me, not ${metres(top.before)} m.`
@@ -329,13 +347,14 @@ export function beatThinking(step: BeatStep, who: PersonOf, deg: number | null):
 }
 
 /** A frozen step's picture block, put together for the card: a look's news lines (empty: nothing
- * new; null for other steps), his options with before → now and ↑ / ↓, and his thinking line.
- * Null for a missing look and for the decision (told by `decisionStory`). */
+ * new; null for other steps), his options with baseline → current and ↑ / ↓ / ↗ / ↘, and his
+ * thinking line. Null for a missing look and for the decision (told by `decisionStory`). */
 export interface PictureView {
   news: string[] | null;
   optionsLabel: string;
+  optionsNote?: string;
   options: OptionLine[];
-  compare: boolean; // show before → now
+  compare: boolean; // show baseline → current
   thinking: string;
 }
 
@@ -359,7 +378,8 @@ export function pictureView(
     if (step.missing || !p) return null;
     return {
       news: newsLines(p.news ?? [], who),
-      optionsLabel: "His options: before this look → after",
+      optionsLabel: "His options: without this look → with it",
+      optionsNote: `Both are computed at the same frozen frame. ↑ ↓ cross 50%; ↗ ↘ move ${Math.round(SHIFT * 100)} points or more.`,
       options: optionLines(p.options, p.before, p.opened, p.closed, who, teaching),
       compare: true,
       thinking: lookThinking(lookDirection(hero, run, step), p, who, teaching),

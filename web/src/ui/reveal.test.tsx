@@ -7,7 +7,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Chapter } from "./Chapter";
 import { FloodlightBackground } from "./FloodlightBackground";
-import { jumpTo, UNREVEALED_WORD_OPACITY, useReveal } from "./reveal";
+import { jumpTo, jumpToTop, UNREVEALED_WORD_OPACITY, useReveal } from "./reveal";
 import { TextReveal } from "./TextReveal";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -291,6 +291,52 @@ describe("scroll-linked text and floodlight", () => {
     expect(words.at(-1)!.style.transform).toBe("translateY(8px)");
   });
 
+  it("finishes words in the lower viewport without another scroll, with no fading", () => {
+    const frames = new Map<number, FrameRequestCallback>();
+    let next = 0;
+    let now = 100;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn((callback: FrameRequestCallback) => {
+        frames.set(++next, callback);
+        return next;
+      }),
+    );
+    vi.stubGlobal(
+      "cancelAnimationFrame",
+      vi.fn((id: number) => frames.delete(id)),
+    );
+    const tick = (elapsed: number) => {
+      now += elapsed;
+      const callbacks = [...frames.values()];
+      frames.clear();
+      act(() => callbacks.forEach((callback) => callback(now)));
+    };
+    vi.mocked(Element.prototype.getBoundingClientRect).mockReturnValue(
+      rect(window.innerHeight * 0.9),
+    );
+    const heading = mountText();
+    const words = [...heading.querySelectorAll<HTMLElement>(".scroll-word")];
+
+    window.dispatchEvent(new Event("wheel"));
+    act(() => window.dispatchEvent(new Event("scroll")));
+    tick(0);
+    expect(words.at(-1)!.style.transform).toBe("translateY(8px)");
+    tick(180);
+    const halfway = Number(/translateY\((.*)px\)/.exec(words.at(-1)!.style.transform)![1]);
+    expect(halfway).toBeGreaterThan(0);
+    expect(halfway).toBeLessThan(8);
+    for (const word of words) expect(word.style.opacity).toBe("1");
+    tick(180);
+    for (const word of words) {
+      expect(word.style.opacity).toBe("1");
+      expect(word.style.transform).toBe("translateY(0px)");
+    }
+    expect(frames.size).toBe(0);
+    expect(FakeObserver.all[0].disconnect).toHaveBeenCalled();
+  });
+
   type Rgb = [number, number, number];
   const hex = (value: string): Rgb =>
     value.match(/[a-f\d]{2}/gi)!.map((channel) => parseInt(channel, 16)) as Rgb;
@@ -350,6 +396,38 @@ describe("scroll-linked text and floodlight", () => {
       expect(word.style.transform).not.toBe("");
     }
     expect(words.at(-1)!.style.transform).toBe("translateY(8px)");
+  });
+});
+
+describe("explicit scroll targets", () => {
+  it("cancel the top lock so it cannot pull a target jump back to the top", () => {
+    const frames = new Map<number, FrameRequestCallback>();
+    let next = 0;
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn((callback: FrameRequestCallback) => {
+        frames.set(++next, callback);
+        return next;
+      }),
+    );
+    vi.stubGlobal(
+      "cancelAnimationFrame",
+      vi.fn((id: number) => {
+        frames.delete(id);
+      }),
+    );
+    vi.spyOn(window, "scrollY", "get").mockReturnValue(100);
+    vi.spyOn(window, "scrollX", "get").mockReturnValue(0);
+    window.scrollTo = vi.fn() as typeof window.scrollTo;
+    Element.prototype.scrollIntoView = vi.fn();
+    const target = document.createElement("h2");
+
+    jumpToTop();
+    expect(window.scrollTo).toHaveBeenCalledTimes(1);
+    jumpTo(target);
+    act(() => frames.forEach((callback) => callback(0)));
+    expect(window.scrollTo).toHaveBeenCalledTimes(1);
+    expect(target.scrollIntoView).toHaveBeenCalledTimes(1);
   });
 });
 
