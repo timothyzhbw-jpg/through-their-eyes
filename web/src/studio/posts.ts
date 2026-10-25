@@ -59,10 +59,15 @@ interface Slots {
   runner: string | null;
 }
 
+type FactSlots = Slots & {
+  n: (key: string, decimals: number) => string;
+  pct: (key: string) => string;
+};
+
 interface Fact {
   id: string; // the claim it states (explain/builders.py)
-  en: (s: Slots & { n: (key: string, decimals: number) => string }) => string | null;
-  zh: (s: Slots & { n: (key: string, decimals: number) => string }) => string | null;
+  en: (s: FactSlots) => string | null;
+  zh: (s: FactSlots) => string | null;
 }
 
 const has = (v: Values, ...keys: string[]) => keys.every((k) => typeof v[k] === "number");
@@ -78,7 +83,7 @@ export const FACTS: readonly Fact[] = [
         : null,
     zh: ({ v, hero, runner, n }) =>
       runner && has(v, "err")
-        ? `出球时，${hero}对${runner}位置的判断偏差为${n("err", 1)}米。`
+        ? `传球那一刻，${hero}对${runner}位置的预判偏了${n("err", 1)}米。`
         : null,
   },
   {
@@ -89,7 +94,7 @@ export const FACTS: readonly Fact[] = [
         : null,
     zh: ({ v, runner, n }) =>
       runner && has(v, "err")
-        ? `如果没有那一眼，对${runner}位置的判断偏差会达到${n("err", 1)}米。`
+        ? `如果没有那一眼，他对${runner}位置的预判会偏${n("err", 1)}米。`
         : null,
   },
   {
@@ -100,7 +105,7 @@ export const FACTS: readonly Fact[] = [
         : null,
     zh: ({ v, hero, n }) =>
       has(v, "n", "window_s")
-        ? `接球前${n("window_s", 0)}秒内，${hero}回头观察了${n("n", 0)}次。`
+        ? `接球前${n("window_s", 1)}秒内，${hero}回头观察了${n("n", 0)}次。`
         : null,
   },
   {
@@ -109,9 +114,9 @@ export const FACTS: readonly Fact[] = [
       runner && has(v, "p_belief", "p_true")
         ? `${hero} gave the pass to ${runner} a ${n("p_belief", 2)} chance; it was ${n("p_true", 2)}.`
         : null,
-    zh: ({ v, hero, runner, n }) =>
+    zh: ({ v, hero, runner, pct }) =>
       runner && has(v, "p_belief", "p_true")
-        ? `${hero}判断传给${runner}的成功率是${n("p_belief", 2)}，实际是${n("p_true", 2)}。`
+        ? `${hero}判断传给${runner}的成功率是${pct("p_belief")}，实际是${pct("p_true")}。`
         : null,
   },
   {
@@ -120,16 +125,16 @@ export const FACTS: readonly Fact[] = [
       runner && has(v, "p_belief", "p_true")
         ? `Without that look, ${hero} would have given the pass to ${runner} a ${n("p_belief", 2)} chance; it was ${n("p_true", 2)}.`
         : null,
-    zh: ({ v, hero, runner, n }) =>
+    zh: ({ v, hero, runner, pct }) =>
       runner && has(v, "p_belief", "p_true")
-        ? `如果没有那一眼，${hero}会以为传给${runner}的成功率是${n("p_belief", 2)}，实际是${n("p_true", 2)}。`
+        ? `如果没有那一眼，${hero}会以为传给${runner}的成功率是${pct("p_belief")}，实际是${pct("p_true")}。`
         : null,
   },
   {
     id: "cf_value",
     en: ({ v, n }) =>
       has(v, "dxt") ? `That look was worth ${n("dxt", 2)} in expected threat.` : null,
-    zh: ({ v, n }) => (has(v, "dxt") ? `那一眼价值${n("dxt", 2)}的预期威胁。` : null),
+    zh: ({ v, n }) => (has(v, "dxt") ? `那一眼让这次进攻的预期威胁多了${n("dxt", 2)}。` : null),
   },
   {
     id: "gap_to_nearest_opponent",
@@ -138,7 +143,7 @@ export const FACTS: readonly Fact[] = [
         ? `${runner} was ${n("gap", 1)} metres from the nearest opponent when the pass was played.`
         : null,
     zh: ({ v, runner, n }) =>
-      runner && has(v, "gap") ? `出球时，${runner}离最近的对手有${n("gap", 1)}米。` : null,
+      runner && has(v, "gap") ? `传球时，${runner}距最近对手${n("gap", 1)}米。` : null,
   },
   {
     id: "gap_opened",
@@ -147,9 +152,7 @@ export const FACTS: readonly Fact[] = [
         ? `While the ball travelled, ${runner} opened up ${n("gain", 1)} metres on his marker.`
         : null,
     zh: ({ v, runner, n }) =>
-      runner && has(v, "gain")
-        ? `球在途中，${runner}把与盯防者的距离拉开了${n("gain", 1)}米。`
-        : null,
+      runner && has(v, "gain") ? `球飞行途中，${runner}甩开盯防球员${n("gain", 1)}米。` : null,
   },
   {
     id: "time_since_last_scan",
@@ -158,7 +161,7 @@ export const FACTS: readonly Fact[] = [
         ? `${hero} had last checked his shoulder ${n("secs", 1)} seconds before the ball arrived.`
         : null,
     zh: ({ v, hero, n }) =>
-      has(v, "secs") ? `球到脚下时，${hero}距上次回头观察已过去${n("secs", 1)}秒。` : null,
+      has(v, "secs") ? `球到脚下时，${hero}已经${n("secs", 1)}秒没回头观察了。` : null,
   },
   {
     id: "observed_share",
@@ -168,7 +171,7 @@ export const FACTS: readonly Fact[] = [
         : null,
     zh: ({ v, hero, n }) =>
       has(v, "window_s", "share")
-        ? `接球前${n("window_s", 0)}秒内，${hero}看到了对手控制区域的${n("share", 0)}%。`
+        ? `接球前${n("window_s", 0)}秒内，${hero}看到了对手控制空间的${n("share", 0)}%。`
         : null,
   },
   {
@@ -176,7 +179,7 @@ export const FACTS: readonly Fact[] = [
     en: ({ v, hero, n }) =>
       has(v, "kmh") ? `${hero}'s pass left his foot at ${n("kmh", 1)} km/h.` : null,
     zh: ({ v, hero, n }) =>
-      has(v, "kmh") ? `${hero}这脚传球的出球时速为${n("kmh", 1)}公里。` : null,
+      has(v, "kmh") ? `${hero}这脚传球出脚球速${n("kmh", 1)}公里/小时。` : null,
   },
 ];
 
@@ -200,11 +203,11 @@ const COPY: Record<
     tags: ["#ThroughTheirEyes"],
   },
   zh: {
-    hook: (hero) => `透过${hero}的眼睛。`,
-    versus: (home, away) => `${home}对${away}，一场合成比赛。`,
-    synthetic: "合成比赛：重新模拟，并非真实画面。",
-    swipe: "左滑看他看到了什么：",
-    watch: "官方观看入口：见简介链接。",
+    hook: (hero) => `以${hero}的视角看。`,
+    versus: (home, away) => `${home}对${away}，一场模拟比赛。`,
+    synthetic: "模拟比赛：由数据重新推演，并非真实画面。",
+    swipe: "左滑，看他当时看到了什么：",
+    watch: "官方观看地址：链接见主页简介。",
     tags: ["#他的视角"],
   },
 };
@@ -244,8 +247,15 @@ export function facts(ctx: PostContext, lang: PostLanguage): string[] {
     const claim = supported.get(fact.id);
     if (!claim) continue;
     const n = (key: string, decimals: number) => Number(claim.values[key]).toFixed(decimals);
-    const text = fact[lang]({ v: claim.values, hero, runner, n });
-    if (text && checked(text, allowed)) out.push(text);
+    const pct = (key: string) => `${(Number(claim.values[key]) * 100).toFixed(0)}%`;
+    const text = fact[lang]({ v: claim.values, hero, runner, n, pct });
+    const factAllowed = new Set(allowed);
+    if (lang === "zh") {
+      for (const value of Object.values(claim.values)) {
+        if (typeof value === "number") factAllowed.add(value * 100);
+      }
+    }
+    if (text && checked(text, factAllowed)) out.push(text);
   }
   return out;
 }
