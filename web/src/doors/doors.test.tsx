@@ -10,12 +10,21 @@ import raw from "../../public/data/hero_seed3.json";
 import payloadJson from "../../public/data/fixture_payload_seed3.json";
 import whatIfJson from "../../public/data/whatif_seed3.json";
 import { App } from "../App";
+import { createApi } from "../api/client";
 import { parseHero } from "../data/hero";
 import { doorOf, parseDeepLink } from "../deeplink";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
-import { pressureExport } from "../testing";
-import { DOOR_LABEL, DOORS, doorOfPlay, doorOfStep, parseDoor, withDoor } from "./doors";
+import { API, fakeFetch, pressureExport, settle } from "../testing";
+import {
+  DOOR_LABEL,
+  DOORS,
+  doorOfPlay,
+  doorOfStep,
+  parseDoor,
+  withDoor,
+  withPageAction,
+} from "./doors";
 import { doors } from "./state";
 import { readFileSync } from "node:fs";
 
@@ -87,9 +96,13 @@ describe("the doors' addresses", () => {
   it("map the old ?step= and ?play= onto the doors; ?door= wins", () => {
     expect(doorOfStep("event")).toEqual({ door: "look", studio: null });
     expect(doorOfStep("your-view")).toEqual({ door: "look", studio: null });
-    for (const s of ["tactics", "content", "value", "crew"] as const) {
+    for (const s of ["broadcast", "commentary", "highlights", "stadium", "value"] as const) {
       expect(doorOfStep(s)).toEqual({ door: "studios", studio: s });
     }
+    // the studio steps before the four solutions: the section that holds their panel now
+    expect(doorOfStep("tactics")).toEqual({ door: "studios", studio: "broadcast" });
+    expect(doorOfStep("content")).toEqual({ door: "studios", studio: "highlights" });
+    expect(doorOfStep("crew")).toEqual({ door: "studios", studio: "commentary" });
     expect(["yourcall", "eyes", "drill", "steps", "recap"].map(doorOfPlay)).toEqual([
       "turn",
       "turn",
@@ -105,19 +118,56 @@ describe("the doors' addresses", () => {
     });
   });
 
-  it("write ?door= and keep every other parameter; a studio step only on its door", () => {
+  it("write ?door=, keep match, moment and settings, and consume one-shot actions", () => {
     expect(withDoor("?persona=coach&lang=zh", "turn")).toBe("?persona=coach&lang=zh&door=turn");
     expect(withDoor("?door=studios&step=value", "look")).toBe("?door=look");
     expect(withDoor("?step=value", "studios")).toBe("?step=value&door=studios");
+    expect(
+      withDoor(
+        "?match=press_escape-0&moment=far_post_finish&persona=coach&lang=zh&autoplay=0&at=decision&run=counterfactual&ask=why&tamper=cf_value&play=eyes&tour=quick&compare=extra",
+        "turn",
+      ),
+    ).toBe(
+      "?match=press_escape-0&moment=far_post_finish&persona=coach&lang=zh&autoplay=0&door=turn",
+    );
+  });
+
+  it.each(["tour=quick", "play=eyes"])(
+    "does not restart %s after switching pages and reloading the address",
+    (action) => {
+      window.history.replaceState(null, "", `/?match=blind_side_run-3&${action}`);
+      const page = mount(offline());
+      act(() => tab(page, "Your turn").click());
+      const reloaded = parseDeepLink(window.location.search);
+      expect(doorOf(reloaded).door).toBe("turn");
+      expect(reloaded).toMatchObject({ play: null, tour: null, warnings: [] });
+      expect(new URLSearchParams(window.location.search).get("match")).toBe("blind_side_run-3");
+    },
+  );
+
+  it("keeps a stitched match's moment and settings while replacing a feature action", () => {
+    const search = withPageAction(
+      "?match=match-1&moment=far_post_finish&persona=coach&lang=zh&team=KES&player=H8&view=tactical&play=eyes&tour=quick&door=home&step=value&at=decision&run=counterfactual&ask=why&tamper=cf_value&compare=extra",
+      "?door=studios&step=commentary",
+    );
+    expect(search).toBe(
+      "?match=match-1&moment=far_post_finish&persona=coach&lang=zh&team=KES&player=H8&view=tactical&door=studios&step=commentary",
+    );
+    expect(doorOf(parseDeepLink(search))).toEqual({
+      door: "studios",
+      studio: "commentary",
+      yourView: false,
+    });
   });
 });
 
 describe("the header's tabs", () => {
-  it("mark the door on screen and switch it in place, the address following", () => {
+  it("mark the door on screen and switch it in place, keeping focus and updating the address", () => {
     const page = mount(offline());
     expect(textOf(page.querySelector(".door-tabs [aria-current=page]"))).toBe("The look");
     expect(page.querySelector('section.stage[aria-label="Live screen"]')).not.toBeNull();
 
+    tab(page, "Your turn").focus();
     act(() => tab(page, "Your turn").click());
     expect(doors.get().door).toBe("turn");
     expect(window.location.search).toBe("?door=turn");
@@ -125,16 +175,20 @@ describe("the header's tabs", () => {
     expect(textOf(page.querySelector(".door-tabs [aria-current=page]"))).toBe("Your turn");
     // The same header on every door: the brand, the doors, Settings.
     expect(page.querySelector(".stage-head #settings")).not.toBeNull();
-    // The keyboard stays on the tab it pressed.
-    expect(page.querySelector(".door-tabs [aria-current=page]")).toBe(tab(page, "Your turn"));
+    // The keyboard stays on the current tab after the old header unmounts.
+    expect(document.activeElement).toBe(tab(page, "Your turn"));
 
+    tab(page, "For studios").focus();
     act(() => tab(page, "For studios").click());
     expect(page.querySelector("#journey-panel")).not.toBeNull();
     expect(textOf(page.querySelector("#studios-title"))).toBe("For studios.");
+    expect(document.activeElement).toBe(tab(page, "For studios"));
 
+    tab(page, "The look").focus();
     act(() => tab(page, "The look").click());
     expect(page.querySelector('section.stage[aria-label="Live screen"]')).not.toBeNull();
     expect(window.location.search).toBe("?door=look");
+    expect(document.activeElement).toBe(tab(page, "The look"));
   });
 
   it("are 24 px targets or larger, by their CSS", () => {
@@ -180,16 +234,60 @@ describe("Your turn", () => {
 describe("the picture", () => {
   it("comes back when something starts playing on it, and leaving it stops what played", () => {
     const session = offline();
+    const stopVoice = vi.spyOn(session.voice, "stop");
     mount(session);
     act(() => session.controls.playBreakdown());
     expect(session.runner.status.get().status).toBe("running");
     act(() => doors.set({ door: "studios", seq: 1 }));
-    // Leaving door 1 stops the breakdown: nothing plays unseen.
+    // Leaving door 1 stops the breakdown and its narration: nothing plays unseen.
     expect(session.runner.status.get().status).not.toBe("running");
     expect(session.playback.get().playing).toBe(false);
+    expect(stopVoice).toHaveBeenCalled();
     // Opening a line's evidence (the studios' "Open the evidence", a caption) brings it back.
     const line = session.breakdown.get().narration!.lines[0];
     act(() => session.controls.openLine(line.id));
     expect(doors.get().door).toBe("look");
   });
+
+  it.each(["playing", "loading"] as const)(
+    "stops %s narration on leaving The look, including a late TTS response",
+    async (status) => {
+      let finishTts!: (response: Response) => void;
+      const pending = new Promise<Response>((resolve) => (finishTts = resolve));
+      const fetch = fakeFetch({ "POST /api/tts": () => pending });
+      const play = vi.fn(async () => {});
+      const pause = vi.fn();
+      const session = createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, {
+        api: createApi(API, "blind_side_run-3", fetch),
+        makeAudio: () => ({ play, pause, onended: null }),
+      });
+      session.breakdown.set({
+        voice: [{ line: "L1", speaker: "pbp", t: 0, voice: "v", ssml: "<speak/>", cache_key: "k" }],
+      });
+      const page = mount(session);
+      const respond = () => finishTts(new Response(new Blob(["RIFF"], { type: "audio/wav" })));
+      await act(async () => {
+        session.controls.setSound(true);
+        session.playback.set({ captionLine: "L1" });
+        if (status === "playing") respond();
+        await settle();
+      });
+      expect(session.voice.state.get().status).toBe(status);
+      expect(fetch.calls.filter((c) => c.path === "/api/tts")).toHaveLength(1);
+
+      act(() => tab(page, "Your turn").click());
+      expect(session.voice.state.get()).toMatchObject({ status: "idle", line: null });
+      if (status === "loading") {
+        await act(async () => {
+          respond();
+          await settle();
+        });
+        expect(play).not.toHaveBeenCalled();
+      } else {
+        expect(play).toHaveBeenCalledTimes(1);
+        expect(pause).toHaveBeenCalledTimes(1);
+      }
+      expect(session.voice.state.get()).toMatchObject({ status: "idle", line: null });
+    },
+  );
 });

@@ -39,8 +39,11 @@ if (typeof window !== "undefined") {
 }
 const readerScrolling = () => performance.now() - readerAt < READER_MS;
 
+let stopTopLock: (() => void) | null = null;
+
 /** Jump `el` to the top of the view as an anchor would: the headings around it stay plain text. */
 export function jumpTo(el: Element): void {
+  stopTopLock?.();
   el.scrollIntoView({ block: "start", behavior: "instant" });
 }
 
@@ -48,21 +51,24 @@ let holding = 0; // the frame holding the top, while a smooth scroll from the la
 
 /** Jump to the top of the page (a new door), as an anchor would. A smooth scroll still running
  * from the last page (a tour step's) is not cancelled by one jump in Chromium: the top is held for
- * a few frames, until the reader scrolls or presses a key. */
+ * a few frames, until the reader scrolls, presses a key or chooses another target. */
 export function jumpToTop(): void {
+  stopTopLock?.();
   const top = () => {
     if (window.scrollY === 0 && window.scrollX === 0) return;
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   };
   top();
   if (typeof requestAnimationFrame === "undefined") return;
-  cancelAnimationFrame(holding);
   let frames = 30;
   const stop = () => {
     cancelAnimationFrame(holding);
+    holding = 0;
     frames = 0;
+    stopTopLock = null;
     for (const type of READER) window.removeEventListener(type, stop, true);
   };
+  stopTopLock = stop;
   for (const type of READER) window.addEventListener(type, stop, { capture: true, once: true });
   const hold = () => {
     if (frames-- <= 0) return stop();
@@ -75,7 +81,7 @@ export function jumpToTop(): void {
 /** What the reader does to scroll the page themself. */
 const READER = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
 
-/** Reveal each word over the scroll interval ending with the element top at 60% of the viewport. */
+/** Lift words with the reader's scroll, then finish visible text within a short ease on its own. */
 export function useTextReveal<T extends HTMLElement>(reduced: boolean) {
   const cleanup = useRef<() => void>(() => {});
   return useCallback(
@@ -110,6 +116,7 @@ export function useTextReveal<T extends HTMLElement>(reduced: boolean) {
       let frame = 0;
       let done = false;
       let scrolled = false; // the lifted state is only applied once the reader scrolls
+      let visibleAt: number | null = null;
       const stop = () => {
         observer?.disconnect();
         el.removeEventListener("focusin", finish);
@@ -129,19 +136,32 @@ export function useTextReveal<T extends HTMLElement>(reduced: boolean) {
         if (done) return;
         const viewport = window.innerHeight;
         const end = viewport * 0.6;
-        const top = el.getBoundingClientRect().top;
+        const { top, bottom } = el.getBoundingClientRect();
         if (top <= end) {
           finish();
           return;
         }
         if (!scrolled) return; // anchor jumps, prints and stills see plain text
-        const progress = Math.min(1, Math.max(0, (viewport * 0.95 - top) / (viewport * 0.35)));
+        const visible = top < viewport && bottom > 0;
+        if (!visible) visibleAt = null;
+        else visibleAt ??= performance.now();
+        const elapsed = visibleAt === null ? 0 : (performance.now() - visibleAt) / 360;
+        const timed = 1 - (1 - Math.min(1, Math.max(0, elapsed))) ** 3;
+        const progress = Math.min(
+          1,
+          Math.max(timed, (viewport * 0.95 - top) / (viewport * 0.35), 0),
+        );
+        if (progress === 1) {
+          finish();
+          return;
+        }
         const count = words.length;
         words.forEach((word, index) => {
           const local = Math.min(1, Math.max(0, (progress * (count + 3) - index) / 4));
           word.style.opacity = String(UNREVEALED_WORD_OPACITY);
           word.style.transform = `translateY(${8 * (1 - local)}px)`;
         });
+        if (visible) schedule();
       };
       const schedule = () => {
         if (!frame && !done) frame = requestAnimationFrame(update);

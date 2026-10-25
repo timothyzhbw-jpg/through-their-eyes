@@ -52,7 +52,7 @@ async function main() {
   const opens = doorOf(link);
   doors.set({ door: opens.door, seq: 0 });
   if (opens.studio) openStep(opens.studio);
-  if (link.step === "event") revealCompare();
+  if (link.step === "event" || link.compare) revealCompare();
   if (opens.yourView) {
     settingsMenu.set({ open: true });
     yourViewMenu.set({ open: true });
@@ -166,6 +166,12 @@ async function main() {
     void withoutLookOf(session, undefined, dataUrl).load(); // "Without the look", told: a few KB
     void extraLooksOf(session, undefined, dataUrl).load(); // and "With two more looks"
     void heroGatesOf(session, undefined, dataUrl).load(); // how often the held-out seeds change
+    // A plain visit opens the landing page (doors/Landing.tsx), which says what the intro card
+    // said and more: the card stays a stitched match's.
+    if (link.intro) {
+      doors.set({ door: "home", seq: 0 });
+      intro.set({ open: false });
+    }
     applyDeepLink(session, link);
     broadcast(session.controls);
     if (filming) {

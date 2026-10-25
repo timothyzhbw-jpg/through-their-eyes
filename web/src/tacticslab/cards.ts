@@ -1,8 +1,7 @@
-// The Tactics lab's cards (SPEC 4.8, 7): why a common tactic works, told with this match's own
-// synthetic data. Each card names what it measures, prints the definition of every number and its
-// source, and ties them to the hero moment that shows the tactic at work. The numbers are computed
-// here from the events and tracking of the session on screen (a hero moment or the stitched
-// match), so a card says what its scope is: "this moment" or "this match".
+// The Tactics lab's five tactic cards (SPEC 4.8, 7). Decisions, progression and shot quality are
+// parameter rows of their tactic, never peer tactics. Every row has Pro and Plain explanations, a
+// definition and a source. All rows in a card use the same hero or match scope, measured in the
+// browser from its events and tracking, and the card links to the moment that shows it at work.
 
 import type { Hero } from "../data/hero";
 import {
@@ -19,39 +18,54 @@ import { moveOf, type Move } from "../xtexplain/zones";
 import { OPEN_P, laneCounts, lanesAt } from "./lanes";
 import { CARD_SCENARIO, NO_SCOPE, type Scope } from "./scope";
 import {
+  COUNTER_WINDOW_S,
   FPS,
   HALF_LENGTH,
+  MIN_BYPASSED,
   PITCH_L,
+  PRESSED,
   PRESS_ZONE_FROM,
   PRESS_ZONE_SHARE,
   REGAIN_WINDOW_S,
   THIRD_START,
+  TRANSITION_WINDOW_S,
   XG_CAP,
   XG_D0,
   XG_PEAK,
   XG_SCALE,
+  buildUpMetrics,
+  counterAttack,
   pressMetrics,
   progression,
   regains,
   shotQuality,
+  transitionAfterLoss,
+  xtAt,
   type Team,
   type XtGrid,
 } from "./metrics";
 
-export type CardId = "high_press" | "decisions" | "corners" | "shot_quality" | "progression";
+export type TacticId = "high_press" | "counter_attack" | "build_up" | "transition" | "corners";
+/** Retired lens IDs remain valid for moment links; they are no longer cards in the lab. */
+export type CardId = TacticId | "decisions" | "shot_quality" | "progression";
 
-export const CARD_IDS: readonly CardId[] = [
+export const CARD_IDS: readonly TacticId[] = [
   "high_press",
-  "decisions",
+  "counter_attack",
+  "build_up",
+  "transition",
   "corners",
-  "shot_quality",
-  "progression",
 ];
 
+const MATCH_FIRST: ReadonlySet<TacticId> = new Set(["counter_attack", "build_up", "transition"]);
+
 export interface Metric {
+  id: string;
   label: string;
   /** One value per team (home, away) or a single one. */
   values: string[];
+  pro: string;
+  plain: string;
   definition: string;
   source: SourceKind;
   /** What the source chip's tooltip adds, when the kind's own words are not enough. */
@@ -71,6 +85,10 @@ export interface LabCard {
   title: string;
   /** The tactic in a sentence, and why it works, in plain words. */
   idea: string;
+  /** What changed in the model, for analyst and coach. */
+  pro: string;
+  /** One sentence a casual fan gets. */
+  plain: string;
   scope: "this moment" | "this match";
   /** What the numbers were measured on, in words: the moment that shows the tactic, or the match. */
   measured: string;
@@ -78,11 +96,13 @@ export interface LabCard {
   /** What the sim cannot say here, said honestly. */
   limits: string;
   moment: MomentLink;
+  /** A frame-aware match link for an example without a named hero moment. */
+  href?: string;
   /** True when the session on screen is the card's own hero moment. */
   here: boolean;
   /** Where the metrics are told in the moment's own view, if the viewer is on it. */
   watch: Watch | null;
-  /** The progression card's best pass as a move between zones, told per persona (xtexplain/). */
+  /** The card's xT example as a move between zones, told per persona (xtexplain/). */
   xtMove?: Move | null;
   /** Nothing to show in this session: why, and what to open instead. */
   empty: string | null;
@@ -93,11 +113,14 @@ const TEAM_IDS: readonly Team[] = [0, 1];
 
 const link = (id: MomentLinkId): MomentLink => MOMENT_LINKS.find((m) => m.id === id)!;
 
-/** The card's hero moment. */
+/** The moment linked from a tactic, or from a retired lens ID held by an external caller. */
 export const CARD_MOMENT: Record<CardId, MomentLinkId> = {
   high_press: "pressure",
-  decisions: "pressure",
+  counter_attack: "match",
+  build_up: "pressure",
+  transition: "match",
   corners: "corner",
+  decisions: "pressure",
   shot_quality: "goal",
   progression: "look",
 };
@@ -121,8 +144,83 @@ const ppdaText = (v: number | null) => (v === null ? dash : v.toFixed(1));
 
 const TRACKING = (what: string) => `${what}, computed in the browser from this match's event feed`;
 const MODELLED = "The sim's own models, read from the export";
+const XG_DEFINITION =
+  "Expected goals of an unplaced shot at d metres from the centre of the goal it attacks: " +
+  `the smaller of ${XG_CAP} and ${XG_PEAK} · e^(−(d − ${XG_D0}) / ${XG_SCALE}), the sim's distance model (sim/decision.py).`;
 
-function high_press(hero: Hero, view: Context): LabCard {
+/** What a builder returns: builders may leave `pro` and `plain` to EXPLANATIONS. */
+type Built = Omit<LabCard, "pro" | "plain"> & Partial<Pick<LabCard, "pro" | "plain">>;
+
+const EXPLANATIONS: Partial<Record<CardId, Pick<LabCard, "pro" | "plain">>> = {
+  high_press: {
+    pro: `The model counts interceptions and forced turnovers, then compares opponent passes with those ball wins and shots in the ${REGAIN_WINDOW_S}-second window.`,
+    plain: "Win the ball near their goal and your next attack has far less defending to beat.",
+  },
+  corners: {
+    pro: "The model compares the marker's separation when the cutback resolves, with his key look and without it, then counts the corner shots.",
+    plain:
+      "One quick look can keep a defender close enough to stop a rehearsed corner from becoming a chance.",
+  },
+};
+
+function decisionsMetric(hero: Hero): Metric {
+  const run = hero.runs.factual;
+  const lanes = lanesAt(hero, run);
+  const chosen = lanes.find((l) => l.chosen) ?? null;
+  const counts = laneCounts(lanes);
+  const outcome = run.action?.outcome ?? null;
+  const available = !!run.decision && lanes.length > 0 && run.events.some((e) => e.type === "pass");
+  return {
+    id: "decisions",
+    label: "Decisions under pressure",
+    values: [
+      available
+        ? `${counts.open} open · ${counts.blocked} blocked · ${outcome ?? "unresolved"}`
+        : dash,
+    ],
+    pro: available
+      ? `The pressed carrier chose ${chosen?.label ?? "a pass"}: his arrival estimate was ${chosen?.pBelief.toFixed(2) ?? dash}, the true estimate ${chosen?.pTrue?.toFixed(2) ?? "not playable"}, and the outcome was ${outcome ?? "unresolved"}.`
+      : "No press_escape on-ball decision is exported in this scope, so there are no options to score.",
+    plain: available
+      ? `He saw ${counts.open} of his main passing options as open on the truth; the pass ended ${outcome ?? "unresolved"}.`
+      : "There is no pressed player's decision to examine in this view.",
+    definition: `The pressed side's top pass options and outcome at the press_escape decision. A lane is open when its arrival probability on the true state is at least ${Math.round(OPEN_P * 100)}%; the value also reports how that pass ended.`,
+    source: "sim",
+    sourceNote: MODELLED,
+    zeroWhy: available
+      ? undefined
+      : "This scope has no exported press_escape decision on the ball.",
+  };
+}
+
+function progressionMetric(hero: Hero, xt: XtGrid | null): Metric {
+  const events = hero.runs.factual.events;
+  const [home, away] = xt ? TEAM_IDS.map((t) => progression(events, t, xt)) : [null, null];
+  const best = [home, away]
+    .filter((p): p is NonNullable<typeof p> => !!p?.best)
+    .sort((a, b) => b.best!.xt - a.best!.xt)[0]?.best;
+  return {
+    id: "progression",
+    label: "Progression · xT gained",
+    values: each((t) => {
+      const p = t ? away : home;
+      return p ? signed(p.xtAdded) : dash;
+    }),
+    pro: best
+      ? `Expected threat gained on completed passes; ${shortName(best.player)}'s pass to ${shortName(best.receiver ?? "?")} added the most at ${signed(best.xt)}.`
+      : "Expected threat gained on completed passes, valued where each pass starts and ends on the xT grid.",
+    plain: "This credits passes for moving the ball into more dangerous space.",
+    definition:
+      "Expected threat where each completed pass was received minus where it was kicked, summed by the kicking team. xT is our own grid, fitted on the sim's open play (analytics/xt.py).",
+    source: "tracking",
+    sourceNote: TRACKING("Computed"),
+    zeroWhy: !xt
+      ? "The xT grid is loading."
+      : "No completed pass added measurable xT in this view.",
+  };
+}
+
+function high_press(hero: Hero, view: Context): Built {
   const events = hero.runs.factual.events;
   const [home, away] = TEAM_IDS.map((t) => pressMetrics(events, t));
   const first = regains(events)
@@ -139,11 +237,14 @@ function high_press(hero: Hero, view: Context): LabCard {
     measured: "", // set by buildCards, which knows which hero it handed the builder
     metrics: [
       {
+        id: "regains",
         label: "Regains",
         zeroWhy:
           "No ball was won here: the sim's open play changes hands on interceptions only and has " +
           "no open-play tackles (docs/NUMBERS.md M4).",
         values: each((t) => String(t ? away.regains : home.regains)),
+        pro: "Possession changes created by the pressing side's interceptions and forced turnovers.",
+        plain: "This is how often the pressing team won the ball back.",
         definition:
           "The ball won from the opponent: an interception, or a tackle (the sim has tackles in " +
           "the pressure moment only). Each is a change of possession.",
@@ -151,17 +252,24 @@ function high_press(hero: Hero, view: Context): LabCard {
         sourceNote: TRACKING("Counted"),
       },
       {
+        id: "high_regains",
         label: "High regains",
         zeroWhy: "No ball was won in the winner's attacking third in this view.",
         values: each((t) => String(t ? away.highRegains : home.highRegains)),
+        pro: `Ball wins beyond ${THIRD_START.toFixed(1)} m in the winner's attacking frame, closest to the goal being pressed.`,
+        plain: "These are the wins close enough to attack the goal immediately.",
         definition: `A regain in the winner's attacking third: beyond ${THIRD_START.toFixed(1)} m from the centre spot toward the goal it attacks (the last ${(HALF_LENGTH - THIRD_START).toFixed(0)} m of ${PITCH_L}).`,
         source: "tracking",
         sourceNote: TRACKING("Counted"),
       },
       {
+        id: "ppda",
         label: "PPDA, interceptions and tackles",
         zeroWhy: "No interception or tackle in the pressing zone, so PPDA has no value to give.",
         values: each((t) => ppdaText(t ? away.ppda : home.ppda)),
+        pro: "Opponent passes allowed per simulated defensive action in the pressing zone; lower indicates a more effective press.",
+        plain:
+          "A lower number means the defence lets fewer passes through before winning the ball.",
         definition:
           "Opponent passes per defensive action. Passes the opponent kicks in its own " +
           `${Math.round(PRESS_ZONE_SHARE * 100)}% of the pitch (beyond ${PRESS_ZONE_FROM} m in the pressing team's frame), divided by the ` +
@@ -171,16 +279,20 @@ function high_press(hero: Hero, view: Context): LabCard {
         source: "tracking",
         sourceNote: TRACKING("Computed"),
       },
+      decisionsMetric(hero),
       {
+        id: "shots_after_regain",
         label: `Shots within ${REGAIN_WINDOW_S} s of a high regain · xG`,
         zeroWhy: "There was no high regain to follow, so no shot followed one.",
         values: each((t) => {
           const m = t ? away : home;
           return `${m.shotsAfterHighRegain} · ${fixed(m.xgAfterHighRegain)}`;
         }),
+        pro: `Shots and summed distance-xG produced by the pressing team inside the ${REGAIN_WINDOW_S}-second post-regain window.`,
+        plain: "This shows whether winning it high quickly turned into a good shooting chance.",
         definition:
           `Shots by the side that won the ball, kicked within ${REGAIN_WINDOW_S} s of a high ` +
-          "regain, and their xG (the sim's distance model, see Shot quality).",
+          `regain, and their xG. ${XG_DEFINITION}`,
         source: "sim",
         sourceNote: MODELLED,
       },
@@ -199,149 +311,82 @@ function high_press(hero: Hero, view: Context): LabCard {
   };
 }
 
-function decisions(hero: Hero, view: Context): LabCard {
-  const run = hero.runs.factual;
-  const lanes = lanesAt(hero, run);
-  const chosen = lanes.find((l) => l.chosen) ?? null;
-  const counts = laneCounts(lanes);
-  const action = run.action;
-  const outcome = action?.outcome ?? null;
-  const metrics: Metric[] = [];
-  if (run.decision && lanes.length) {
-    metrics.push(
-      {
-        label: "Pass lanes open · blocked",
-        values: [`${counts.open} · ${counts.blocked}`],
-        definition:
-          `Among his top options, a lane is open when the pass would have arrived at least ` +
-          `${Math.round(OPEN_P * 100)}% of the time on the true state at the decision; ` +
-          "otherwise blocked.",
-        source: "sim",
-        sourceNote: MODELLED,
-      },
-      {
-        label: "Pressure on the receiver he chose",
-        values: [chosen?.pressure == null ? dash : `${chosen.pressure.toFixed(1)} m`],
-        definition:
-          "Distance from the receiver to the nearest opponent at the decision frame, from the " +
-          "tracking. A smaller distance is more pressure.",
-        source: "tracking",
-        sourceNote: TRACKING("Measured"),
-      },
-      {
-        label: "He thought · it was",
-        values: [
-          chosen
-            ? `${chosen.pBelief.toFixed(2)} · ${chosen.pTrue === null ? "not playable" : chosen.pTrue.toFixed(2)}`
-            : dash,
-        ],
-        definition:
-          "His chance of the chosen pass arriving as he saw it, and as it really was on the " +
-          "truth at that moment.",
-        source: "sim",
-        sourceNote: MODELLED,
-      },
-      {
-        label: "Outcome",
-        values: [
-          outcome
-            ? `${chosen ? chosen.label : "Pass"}: ${outcome}${action?.receiver ? ` (${shortName(action.receiver)})` : ""}`
-            : dash,
-        ],
-        definition: "How the ball he played ended in the run: complete, intercepted or out.",
-        source: "sim",
-        sourceNote: MODELLED,
-      },
-    );
-  }
-  return {
-    id: "decisions",
-    kicker: "Decisions · the pass out of a press",
-    title: "Decisions under pressure",
-    idea:
-      "Under pressure a player chooses on what he believes, not on what is true. The lanes " +
-      "that look open on his picture may be shut on the pitch; the card puts both side by side.",
-    scope: scopeOf(hero),
-    measured: "", // set by buildCards, which knows which hero it handed the builder
-    metrics,
-    limits:
-      "The decision model chooses at the hero moments only; elsewhere in the match a passing " +
-      "rule plays the ball (SPEC 3.1). The lanes are the player's top options at his decision, " +
-      "not every pass on the pitch.",
-    moment: link("pressure"),
-    here: view.scenario === "press_escape",
-    watch: run.decision ? { label: "Watch the decision", frame: run.decision.frame } : null,
-    empty: metrics.length
-      ? null
-      : hero.kind === "match"
-        ? "The match has no decision to open here: its hero moments carry them."
-        : "This moment has no decision on the ball.",
-  };
-}
-
-function corners(hero: Hero, view: Context): LabCard {
+function corners(hero: Hero, view: Context): Built {
   const events = hero.runs.factual.events;
-  const metrics: Metric[] = [];
   const marker = hero.marker;
-  if (marker) {
-    const sep = marker.separation;
-    metrics.push(
-      {
-        label: "Marker to his man when the pass arrived",
-        values: [
-          `${sep.factual.toFixed(1)} m with the look · ${sep.counterfactual.toFixed(1)} m without`,
-        ],
-        definition:
-          "The corner's marker's distance to the runner he marks at the frame the pass to the " +
-          "runner is received or cut out, in the run with his key scan and in the run without it.",
-        source: "tracking",
-        sourceNote: TRACKING("Measured"),
-      },
-      {
-        label: "How the pass ended",
-        values: [
-          `${marker.resolved.factual.type} with the look · ${marker.resolved.counterfactual.type} without`,
-        ],
-        definition: "The event that ended the cutback in each run: reception, interception or out.",
-        source: "sim",
-        sourceNote: MODELLED,
-      },
-    );
-  }
-  if (hero.match) {
-    const taken = hero.match.possessions.filter((p) => p.restart === "corner");
-    const cornerPossession = new Set(taken.map((p) => p.index));
-    const shotIds = new Set(
-      events
-        .filter((e) => e.type === "shot" && cornerPossession.has(e.possession ?? -1))
-        .map((e) => e.id),
-    );
-    const fromCorners = TEAM_IDS.flatMap((t) => shotQuality(events, t).list).filter((s) =>
-      shotIds.has(s.id),
-    );
-    metrics.push({
-      label: "Corners · shots from them · xG",
-      values: [
-        `${taken.length} · ${fromCorners.length} · ${fixed(fromCorners.reduce((s, x) => s + x.xg, 0))}`,
-      ],
-      definition:
-        "Possessions that began from a corner, the shots taken in those possessions, and their " +
-        "xG (the sim's distance model).",
-      source: "sim",
-      sourceNote: MODELLED,
-    });
-  }
-  const corner = hero.match?.possessions.find((p) => p.restart === "corner");
+  const sep = marker?.separation;
+  const taken = hero.match?.possessions.filter((p) => p.restart === "corner") ?? [];
+  const cornerPossession = new Set(taken.map((p) => p.index));
+  const shotIds = new Set(
+    events
+      .filter((e) => e.type === "shot" && cornerPossession.has(e.possession ?? -1))
+      .map((e) => e.id),
+  );
+  const fromCorners = TEAM_IDS.flatMap((t) => shotQuality(events, t).list).filter((s) =>
+    shotIds.has(s.id),
+  );
+  const corner = taken[0];
   return {
     id: "corners",
     kicker: "Set pieces · the short corner",
-    title: "Corners",
+    title: "Set pieces (corners)",
     idea:
       "A corner is a rehearsed passage, so one look can decide it: a marker who checks over his " +
       "shoulder before the ball is played keeps his man; one who does not loses him.",
     scope: scopeOf(hero),
     measured: "", // set by buildCards, which knows which hero it handed the builder
-    metrics,
+    metrics: [
+      {
+        id: "marking",
+        label: "Corner hero's marking",
+        values: [
+          sep
+            ? `${sep.factual.toFixed(1)} m with the look · ${sep.counterfactual.toFixed(1)} m without`
+            : dash,
+        ],
+        pro: "Marker-runner separation when the cutback resolves, compared between the factual scan and its removal.",
+        plain: "This shows whether the defender's look kept him close to the runner.",
+        definition:
+          "The corner marker's distance to the runner at the frame the cutback is received or cut out, in the runs with and without his key scan.",
+        source: "tracking",
+        sourceNote: TRACKING("Measured"),
+        zeroWhy: sep
+          ? undefined
+          : "This scope does not export the corner hero's marking comparison.",
+      },
+      {
+        id: "look_outcome",
+        label: "The look and the outcome",
+        values: [
+          marker
+            ? `${marker.resolved.factual.type} with the look · ${marker.resolved.counterfactual.type} without`
+            : dash,
+        ],
+        pro: "The cutback's terminal event with the key scan and without it: reception, interception or out.",
+        plain:
+          "This compares what happened to the corner when the defender looked and when he did not.",
+        definition:
+          "The event that ended the cutback in each counterfactual run, paired with the presence or removal of the marker's key look.",
+        source: "sim",
+        sourceNote: MODELLED,
+        zeroWhy: marker ? undefined : "This scope has no corner look counterfactual.",
+      },
+      {
+        id: "shot_quality",
+        label: "Shot quality · shots from corners · xG",
+        values: [
+          hero.match
+            ? `${fromCorners.length} · ${fixed(fromCorners.reduce((s, x) => s + x.xg, 0))}`
+            : dash,
+        ],
+        pro: "Distance-xG summed over shots in possessions that started at a corner.",
+        plain: "This values the chances created by corners, not just how many shots followed.",
+        definition: `Shots taken in possessions that began from a corner, and their summed xG. ${XG_DEFINITION}`,
+        source: "sim",
+        sourceNote: MODELLED,
+        zeroWhy: fromCorners.length ? undefined : "No shot from a corner is exported in this view.",
+      },
+    ],
     limits:
       "A corner's passage ends after its cutback and the stitched match cuts it before a shot " +
       "could follow (SPEC 3.1); the row counts what the match's events hold. Crosses and " +
@@ -353,147 +398,249 @@ function corners(hero: Hero, view: Context): LabCard {
       : corner
         ? { label: `Watch the first corner (${clock(corner.start / FPS)})`, frame: corner.start }
         : null,
-    empty: metrics.length ? null : "No corner in this view.",
+    empty:
+      marker || corner ? null : "Not in this match's data: no corner or corner hero is exported.",
   };
 }
 
-function shot_quality(hero: Hero, view: Context): LabCard {
-  const events = hero.runs.factual.events;
-  const [home, away] = TEAM_IDS.map((t) => shotQuality(events, t));
-  const all = [...home.list, ...away.list].sort((a, b) => b.xg - a.xg);
-  return {
-    id: "shot_quality",
-    kicker: "Finishing · where the shot is taken",
-    title: "Shot quality",
-    idea:
-      "A shot from close and central is worth far more than one from range: the same number of " +
-      "shots is a different attack depending on where they are struck, so teams work the ball " +
-      "to a better place first.",
-    scope: scopeOf(hero),
-    measured: "", // set by buildCards, which knows which hero it handed the builder
-    metrics: [
-      {
-        label: "Shots",
-        values: each((t) => String((t ? away : home).shots)),
-        definition: "Shot events in the feed, by the team that took them.",
-        source: "tracking",
-        sourceNote: TRACKING("Counted"),
-      },
-      {
-        label: "xG",
-        values: each((t) => fixed((t ? away : home).xg)),
-        definition:
-          "Expected goals of an unplaced shot at d metres from the centre of the goal it " +
-          `attacks: the smaller of ${XG_CAP} and ${XG_PEAK} · e^(−(d − ${XG_D0}) / ${XG_SCALE}), the sim's distance model ` +
-          "(sim/decision.py), summed over the team's shots.",
-        source: "sim",
-        sourceNote: MODELLED,
-      },
-      {
-        label: "xG per shot",
-        values: each((t) => fixed((t ? away : home).perShot)),
-        definition: "xG divided by shots; a dash means no shot.",
-        source: "sim",
-        sourceNote: MODELLED,
-      },
-    ],
-    limits:
-      "The distance model sees only where the ball was kicked from. The far-post finish moment " +
-      "is decided by a placed-shot model (keeper, aim and sight) that this xG does not use, " +
-      "so its chance of scoring is told in the moment itself, not here.",
-    moment: link("goal"),
-    here: view.scenario === "far_post_finish",
-    watch: all[0] ? { label: "Watch the best chance", frame: all[0].frame } : null,
-    empty: all.length ? null : "No shot in this view.",
-  };
+function matchExampleHref(hero: Hero, frame: number): string {
+  const id = hero.kind === "match" ? `${hero.scenario}-${hero.seed}` : FULL_MATCH;
+  return hrefOf({ query: `?match=${id}&intro=0&at=${frame}` });
 }
 
-function progression_card(hero: Hero, view: Context): LabCard {
-  const events = hero.runs.factual.events;
-  const xt = view.xt;
-  const [home, away] = xt ? TEAM_IDS.map((t) => progression(events, t, xt)) : [null, null];
-  // The team rides on the progression the best pass came from, so it is never guessed.
-  const leader = [home, away]
-    .filter((p): p is NonNullable<typeof p> => !!p?.best)
-    .sort((a, b) => b.best!.xt - a.best!.xt)[0];
-  const best = leader?.best;
-  const xtMove =
-    leader && best && xt
-      ? moveOf({
-          mode: "pass",
-          team: leader.team,
-          from: best.from,
-          to: best.to,
-          grid: xt,
-          delta: best.xt,
-          label: `Best pass (${TEAMS[leader.team]})`,
-        })
+function counter_attack(hero: Hero, view: Context): Built {
+  const result = view.xt ? counterAttack(hero, view.xt) : { best: null, list: [] };
+  const best = result.best;
+  const kind = best?.win.kind === "tackle" ? "forced turnover" : "interception";
+  const shot =
+    best?.endKind === "shot"
+      ? shotQuality(hero.runs.factual.events, best.team).list.find((s) => s.frame === best.endFrame)
       : null;
-  const stat = (f: (p: NonNullable<typeof home>) => string) =>
-    each((t) => {
-      const p = t ? away : home;
-      return p ? f(p) : dash;
-    });
+  const metrics: Metric[] = best
+    ? [
+        {
+          id: "time_to_final_third",
+          label: "Win to final third or shot",
+          values: [`${best.seconds.toFixed(1)} s`],
+          pro: `Elapsed time from the ${kind} to the first qualifying final-third reception or shot.`,
+          plain: "This is how quickly the team turned winning the ball into an attack.",
+          definition: `Seconds from the ball win to the winning team's first shot, or, for a win outside the final third, its first completed pass received there, within ${COUNTER_WINDOW_S} s and before another loss or the possession cut.`,
+          source: "tracking",
+          sourceNote: TRACKING("Measured"),
+        },
+        {
+          id: "passes_used",
+          label: "Passes used",
+          values: [String(best.passes)],
+          pro: "Completed passes in the measured regain-to-final-third or regain-to-shot sequence.",
+          plain: "This counts the passes the counter needed to reach its attacking destination.",
+          definition:
+            "The winning team's completed passes between the regain and the final-third reception or shot.",
+          source: "tracking",
+          sourceNote: TRACKING("Counted"),
+        },
+        {
+          id: "progression",
+          label: "Progression · xT gained",
+          values: [signed(best.xtAdded)],
+          pro: "Expected threat added by the counter's completed passes, from kick to reception locations.",
+          plain: "This credits the counter for moving the ball into more dangerous space.",
+          definition:
+            "Expected threat added by those completed passes: xT where received minus xT where kicked, summed.",
+          source: "tracking",
+          sourceNote: TRACKING("Computed"),
+        },
+        {
+          id: "shot_quality",
+          label: "Shot quality · xG",
+          values: [shot ? fixed(shot.xg) : dash],
+          pro: shot
+            ? `The counter's shot has ${fixed(shot.xg)} distance-xG from its kick location.`
+            : "This counter ends at a final-third reception, so it has no shot to value.",
+          plain: shot
+            ? "This values the chance created at the end of the counter."
+            : "This attack reached the final third but did not produce a shot.",
+          definition: `The xG of the shot that ends the counter; a dash means the counter ends without a shot. ${XG_DEFINITION}`,
+          source: "sim",
+          sourceNote: MODELLED,
+          zeroWhy: shot ? undefined : "The selected counter ends without a shot.",
+        },
+      ]
+    : [];
   return {
-    id: "progression",
-    kicker: "Build-up · moving the ball into danger",
-    title: "Progression",
-    idea:
-      "A pass is worth what it does to the threat: moving the ball from a cold place to a " +
-      "dangerous one adds expected threat, and the passes that add the most are the ones that " +
-      "break lines, which is why teams look for them.",
+    id: "counter_attack",
+    kicker: "Counter-attack · go before they are set",
+    title: "Counter-attack",
+    idea: "A fast attack after a ball win can reach the danger zone before the defence recovers.",
+    pro: best
+      ? `The model follows the ${kind} into the same possession's next final-third reception or shot; it does not call an isolated regain a counter.`
+      : "The model looks for a regain followed quickly by a final-third reception or a shot in the same possession.",
+    plain: "Win it and go before the defence can get back into shape.",
     scope: scopeOf(hero),
-    measured: "", // set by buildCards, which knows which hero it handed the builder
+    measured: "",
+    metrics,
+    limits: `A counter here must reach the final third on a completed pass or produce a shot within ${COUNTER_WINDOW_S} s; a carry alone is not counted. Open-play ball wins are interceptions, not tackles (docs/NUMBERS.md M4).`,
+    moment: link("match"),
+    href: best ? matchExampleHref(hero, best.win.frame) : undefined,
+    here: false,
+    watch: best ? { label: "Watch the counter-attack", frame: best.win.frame } : null,
+    xtMove:
+      best && view.xt
+        ? moveOf({
+            mode: "pass",
+            team: best.team,
+            from: best.from,
+            to: best.to,
+            grid: view.xt,
+            delta: xtAt(view.xt, best.to, best.team) - xtAt(view.xt, best.from, best.team),
+            label: "Counter-attack",
+          })
+        : null,
+    empty: !view.xt
+      ? "The xT grid is loading."
+      : best
+        ? null
+        : "Not in this match's data: no ball win is followed by a fast final-third entry or shot.",
+  };
+}
+
+function build_up(hero: Hero, view: Context): Built {
+  const result = buildUpMetrics(hero);
+  const best = result.best;
+  const xt = view.xt;
+  const leader = xt
+    ? TEAM_IDS.map((team) => progression(hero.runs.factual.events, team, xt))
+        .filter((p) => p.best)
+        .sort((a, b) => b.best!.xt - a.best!.xt)[0]
+    : undefined;
+  const bestPass = leader?.best;
+  const stat = (f: (m: (typeof result.teams)[number]) => string) => each((t) => f(result.teams[t]));
+  return {
+    id: "build_up",
+    kicker: "Possession play · pass through the press",
+    title: "Possession play / breaking the press",
+    idea: "Playing out under pressure can take the ball past a line and into the space the press leaves.",
+    pro: best
+      ? `${shortName(best.player)}'s completed escape went past ${best.bypassed} outfield opponents at ${best.pressure.toFixed(2)} pressing intensity; the model counts only own-half passes.`
+      : `The model measures own-half passes at pressing intensity ${PRESSED} or higher and completed passes past at least ${MIN_BYPASSED} outfield opponents.`,
+    plain: "Keep calm, pass through the press, and the space behind it opens up.",
+    scope: scopeOf(hero),
+    measured: "",
     metrics: [
       {
-        label: "Passes · completed",
-        values: stat((p) => `${p.passes} · ${p.completed}`),
-        definition: "Passes kicked and passes received by a team-mate, by the kicker's team.",
-        source: "tracking",
-        sourceNote: TRACKING("Counted"),
-      },
-      {
-        label: "xT added",
-        values: stat((p) => signed(p.xtAdded)),
-        definition:
-          "Expected threat (Singh, 2019) where each completed pass was received minus where it " +
-          "was kicked, for the team that kicked it, summed. xT is our own grid, fitted on the " +
-          "sim's open play (analytics/xt.py).",
+        id: "completed_under_pressure",
+        label: "Completed passes under pressure",
+        values: stat((m) => `${m.pressured} · ${m.completedPressured}`),
+        pro: `Own-half attempts and completions at pressing intensity ${PRESSED} or higher, shown as attempted · completed.`,
+        plain:
+          "This shows how often a team-mate completed the pass while the passer was under heavy pressure.",
+        definition: `Passes kicked in the passer's own half with pressing intensity at least ${PRESSED}, and how many a team-mate received; values are attempted · completed.`,
         source: "tracking",
         sourceNote: TRACKING("Computed"),
+        zeroWhy: "No own-half pass was kicked under heavy pressure in this view.",
       },
       {
-        label: "Progressive passes",
-        values: stat((p) => String(p.progressive)),
-        definition: "Completed passes that added expected threat (above zero).",
+        id: "lines_broken",
+        label: "Lines broken",
+        values: stat((m) => `${m.lineBreakingPressured} under pressure · ${m.lineBreaking} all`),
+        pro: `Completed own-half passes past at least ${MIN_BYPASSED} outfield opponents, split by whether the passer was heavily pressed.`,
+        plain:
+          "These completed passes took opponents out of the play and opened space beyond them.",
+        definition: `Completed own-half passes past at least ${MIN_BYPASSED} opponents who were goal-side of the ball at the kick and behind it at reception; keepers do not count. The value separates pressured passes from all build-up passes.`,
         source: "tracking",
         sourceNote: TRACKING("Counted"),
+        zeroWhy: "No completed own-half pass broke a line in this view.",
       },
-      {
-        label: "Best pass",
-        values: stat((p) =>
-          p.best
-            ? `${shortName(p.best.player)} → ${shortName(p.best.receiver ?? "?")} ${signed(p.best.xt)}`
-            : dash,
-        ),
-        definition: "The completed pass that added the most expected threat.",
-        source: "tracking",
-        sourceNote: TRACKING("Computed"),
-      },
+      progressionMetric(hero, view.xt),
+      decisionsMetric(hero),
     ],
     limits:
-      "xT credits only passes that were received: a lost pass adds nothing here (the match's " +
-      "tactics card counts it as the threat handed over). In open play the sim's passing rule " +
-      "rarely reaches the final third, so most gains are small.",
-    moment: link("look"),
-    here: view.scenario === "blind_side_run",
-    watch: best ? { label: "Watch the best pass", frame: best.frame } : null,
-    xtMove,
-    empty: !xt
+      "Open-play pass choices come from the sim's passing rule; only hero decisions use the decision model. Pressure, marking, movement and whether the pass arrives are simulated throughout. xT credits completed passes only.",
+    moment: link("pressure"),
+    here: view.scenario === "press_escape",
+    watch: best ? { label: "Watch the press escape", frame: best.frame } : null,
+    xtMove:
+      leader && bestPass && xt
+        ? moveOf({
+            mode: "pass",
+            team: leader.team,
+            from: bestPass.from,
+            to: bestPass.to,
+            grid: xt,
+            delta: bestPass.xt,
+            label: `Best pass (${TEAMS[leader.team]})`,
+          })
+        : null,
+    empty: result.list.length ? null : "Not in this match's data: no resolved own-half pass.",
+  };
+}
+
+function transition(hero: Hero, view: Context): Built {
+  const result = view.xt ? transitionAfterLoss(hero, view.xt) : { best: null, list: [] };
+  const best = result.best;
+  const metrics: Metric[] = best
+    ? [
+        {
+          id: "space_behind_line",
+          label: "Space behind the line · at loss → window end",
+          values: [`${best.spaceAtLoss.toFixed(1)} m → ${best.spaceAtEnd.toFixed(1)} m`],
+          pro: `Distance behind the deepest outfield defender at the loss and ${best.seconds.toFixed(1)} s later; the line moved ${best.lineTowardGoal.toFixed(1)} m toward its own goal.`,
+          plain:
+            "This shows how much room the new attackers had behind the defence after the loss.",
+          definition: `Distance from the losing team's deepest outfield player to its own goal line at the loss and after ${best.seconds.toFixed(1)} s; the window stops at the next loss, ${TRANSITION_WINDOW_S} s, or the possession cut.`,
+          source: "tracking",
+          sourceNote: TRACKING("Measured"),
+        },
+        {
+          id: "attackers_xt",
+          label: "Attackers' xT · at loss → window peak",
+          values: [`${best.xtStart.toFixed(3)} → ${best.xtPeak.toFixed(3)}`],
+          pro: "The ball-winning team's expected threat at the regain and at the ball's most dangerous location in the window.",
+          plain:
+            "This shows how much more dangerous the attack became while the defence was recovering.",
+          definition:
+            "The ball-winning team's xT where it won the ball and the highest xT the ball reached in the measured window.",
+          source: "tracking",
+          sourceNote: TRACKING("Computed"),
+        },
+      ]
+    : [];
+  return {
+    id: "transition",
+    kicker: "Transition · the seconds after a loss",
+    title: "Transition after losing the ball",
+    idea: "A loss can leave the back line moving toward its own goal with space behind it for the new attackers.",
+    pro: best
+      ? `The model freezes the loss and follows the ball and the losing back line for ${best.seconds.toFixed(1)} s, stopping at the next loss or the possession cut.`
+      : "The model looks for tracking after a loss; a regain at the possession cut is not a transition example.",
+    plain:
+      "Lose it with your defenders upfield and the other side can attack the open space behind them.",
+    scope: scopeOf(hero),
+    measured: "",
+    metrics,
+    limits:
+      "The back line is the deepest outfield player, not a detected tactical formation. Space is its distance to the goal line, and the window can be shorter than the definition when the stitched match cuts away. Recovery runs are not exported, so no recovery-run row is shown.",
+    moment: link("match"),
+    href: best ? matchExampleHref(hero, best.win.frame) : undefined,
+    here: false,
+    watch: best ? { label: "Watch the transition", frame: best.win.frame } : null,
+    xtMove:
+      best && view.xt
+        ? moveOf({
+            mode: "pass",
+            team: best.team,
+            from: best.win.at,
+            to: best.peakAt,
+            grid: view.xt,
+            delta: best.xtPeak - best.xtStart,
+            label: "After the loss",
+          })
+        : null,
+    empty: !view.xt
       ? "The xT grid is loading."
-      : events.some((e) => e.type === "pass")
+      : best
         ? null
-        : "No pass in this view.",
+        : "Not in this match's data: no loss has tracking afterwards in the same possession.",
   };
 }
 
@@ -505,12 +652,12 @@ export interface Context {
 const scopeOf = (hero: Hero): LabCard["scope"] =>
   hero.kind === "match" ? "this match" : "this moment";
 
-const BUILDERS: Record<CardId, (hero: Hero, view: Context) => LabCard> = {
+const BUILDERS: Record<TacticId, (hero: Hero, view: Context) => Built> = {
   high_press,
-  decisions,
+  counter_attack,
+  build_up,
+  transition,
   corners,
-  shot_quality,
-  progression: progression_card,
 };
 
 /** A value with nothing in it: zero, a dash, or only zeros ("0 · 0.00"). */
@@ -543,15 +690,26 @@ export function leadWithValues(card: LabCard): LabCard {
   return { ...card, metrics: [...live, ...blank] };
 }
 
+/** The builder's card with its explanations: its own, else the id's entry in EXPLANATIONS. */
+function explained(id: CardId, card: Built): LabCard {
+  const text = EXPLANATIONS[id];
+  return { ...card, pro: card.pro ?? text?.pro ?? "", plain: card.plain ?? text?.plain ?? "" };
+}
+
 /** The card for `id`, measured on the moment that shows its tactic (see scope.ts). */
-function scoped(id: CardId, session: Hero, xt: XtGrid | null, scope: Scope): LabCard {
+function scoped(id: TacticId, session: Hero, xt: XtGrid | null, scope: Scope): LabCard {
   const want = CARD_SCENARIO[id];
   const moment = link(CARD_MOMENT[id]);
   const view: Context = { scenario: session.kind === "hero" ? session.scenario : "match", xt };
-  const hero = session.kind === "match" || session.scenario === want ? session : scope.heroes[want];
+  const hero =
+    MATCH_FIRST.has(id) && scope.match
+      ? scope.match
+      : session.kind === "match" || session.scenario === want
+        ? session
+        : scope.heroes[want];
   if (!hero) {
     return {
-      ...BUILDERS[id](session, view),
+      ...explained(id, BUILDERS[id](session, view)),
       measured: `${moment.label} (${want})`,
       scope: "this moment",
       metrics: [],
@@ -566,9 +724,21 @@ function scoped(id: CardId, session: Hero, xt: XtGrid | null, scope: Scope): Lab
   }
   const on = (h: Hero, measured: string): LabCard => {
     const card = BUILDERS[id](h, view);
-    return leadWithValues({ ...card, measured, watch: h === session ? card.watch : null });
+    return leadWithValues({
+      ...explained(id, card),
+      measured,
+      watch: h === session ? card.watch : null,
+      here: h === session && card.here,
+    });
   };
-  const own = session.kind === "match" ? "this match" : `${moment.label} (${want})`;
+  const own =
+    MATCH_FIRST.has(id) && hero.kind === "match"
+      ? session.kind === "match"
+        ? "this match"
+        : `the whole stitched match (${hero.scenario}-${hero.seed})`
+      : session.kind === "match"
+        ? "this match"
+        : `${moment.label} (${want})`;
   const card = on(hero, own);
   if (!nothingToShow(card) || !scope.match || hero === scope.match) return card;
   // The moment holds none of what the card measures: the whole stitched match does, or says so.
@@ -577,8 +747,8 @@ function scoped(id: CardId, session: Hero, xt: XtGrid | null, scope: Scope): Lab
 }
 
 /**
- * The five cards. On a hero moment each is measured on the moment that shows its tactic, whichever
- * one the page opened on, from `scope`; a match page's cards are measured on the match.
+ * The five tactic cards. Each uses the moment that shows it; counter-attack, possession and
+ * transition prefer the stitched match from `scope`. A match page uses its match throughout.
  */
 export function buildCards(hero: Hero, xt: XtGrid | null, scope: Scope = NO_SCOPE): LabCard[] {
   return CARD_IDS.map((id) => scoped(id, hero, xt, scope));

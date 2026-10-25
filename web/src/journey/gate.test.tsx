@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-// A cold visit to ?step=content or ?step=value (SPEC 7): the moment's cached breakdown is asked for
-// on entering the step, through the app's own request, and never one the service would have to
+// A cold visit to ?step=highlights, commentary or value (SPEC 7): the moment's cached breakdown is
+// asked for on entering the section, through the app's own request, and never one the service would have to
 // generate: those, a failure, or a cap show a "Generate the breakdown" button instead.
 
 import { readFileSync } from "node:fs";
@@ -43,7 +43,7 @@ beforeAll(() => {
   });
 });
 beforeEach(() => {
-  journey.set({ step: "tactics", seq: 0 });
+  journey.set({ step: "broadcast", seq: 0 });
   window.history.replaceState(null, "", "/");
 });
 afterEach(() => {
@@ -135,8 +135,8 @@ describe("gateOf", () => {
 });
 
 describe("a cold visit", () => {
-  it("?step=content asks once for the cached breakdown and shows the package", async () => {
-    const { session, asked, text, button } = await coldVisit("content");
+  it("?step=highlights asks once for the cached breakdown and shows the package", async () => {
+    const { session, asked, text, button } = await coldVisit("highlights");
     expect(asked()).toHaveLength(1);
     expect(asked()[0].body).toMatchObject({ personas: ["casual"], languages: ["en"] });
     expect(session.breakdown.get().status).toBe("ready");
@@ -158,7 +158,7 @@ describe("a cold visit", () => {
   });
 
   it("says it is loading while the request is out", async () => {
-    const { text, button } = await coldVisit("content", {
+    const { text, button } = await coldVisit("highlights", {
       reply: () => new Promise(() => {}) as never,
     });
     expect(text()).toContain("Loading the verified breakdown");
@@ -166,7 +166,7 @@ describe("a cold visit", () => {
   });
 
   it("a moment that is not prewarmed shows the button and calls nothing", async () => {
-    const { asked, text, button } = await coldVisit("content", { scenario: "open_play" });
+    const { asked, text, button } = await coldVisit("highlights", { scenario: "open_play" });
     expect(asked()).toHaveLength(0);
     expect(button()).toBeDefined();
     expect(text()).toContain("not prewarmed");
@@ -183,7 +183,7 @@ describe("a cold visit", () => {
   });
 
   it("a failed request is asked once, not in a loop, and the bundled breakdown stands in", async () => {
-    const { session, asked, text, button } = await coldVisit("content", {
+    const { session, asked, text, button } = await coldVisit("highlights", {
       reply: () => json({ detail: "down" }, 500),
     });
     expect(asked()).toHaveLength(1);
@@ -193,7 +193,7 @@ describe("a cold visit", () => {
   });
 
   it("a persona or language change asks once for its own breakdown, and re-entering the step asks for nothing", async () => {
-    const { session, asked } = await coldVisit("content");
+    const { session, asked } = await coldVisit("highlights");
     expect(asked()).toHaveLength(1);
     act(() => session.controls.setPersona("analyst"));
     for (let k = 0; k < 20; k++) await act(settle);
@@ -204,7 +204,7 @@ describe("a cold visit", () => {
     expect(asked()).toHaveLength(3);
     expect(asked()[2].body).toMatchObject({ personas: ["analyst"], languages: ["zh"] });
     // Leave the step and come back: the breakdown is on screen, so nothing is asked.
-    for (const step of ["tactics", "content"] as const) {
+    for (const step of ["broadcast", "highlights"] as const) {
       journey.set({ step, seq: 0 });
       for (let k = 0; k < 20; k++) await act(settle);
     }
@@ -219,8 +219,16 @@ describe("a cold visit", () => {
     expect(asked()).toHaveLength(3);
   });
 
-  it("the Tactics step asks for nothing", async () => {
-    const { asked } = await coldVisit("tactics");
-    expect(asked()).toHaveLength(0);
+  it("the Tactical broadcast and the Stadium ask for nothing", async () => {
+    for (const step of ["broadcast", "stadium"] as const) {
+      const { asked } = await coldVisit(step);
+      expect(asked(), step).toHaveLength(0);
+    }
+  });
+
+  it("?step=commentary asks once for the cached breakdown the crew wrote", async () => {
+    const { asked, text } = await coldVisit("commentary");
+    expect(asked()).toHaveLength(1);
+    expect(text()).toContain("The crew writes.");
   });
 });

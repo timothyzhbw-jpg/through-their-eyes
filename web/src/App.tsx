@@ -1,10 +1,13 @@
-// Page layout (the Floodlit design), as three doors (doors/, SPEC 7). The look, the default: the
-// live screen fills the first screen (the picture with the header, the moment card, the caption
-// and the playback bar over it), the story of the moment is the quick tour over it, and the moment
-// is told below it, its compare first. Your turn: a hub whose three cards open the modes where the
-// viewer is the player; each mode takes the screen as it always has. For studios: Tactics →
-// Content → Value → the AI crew, one step at a time. The header is the same on every door: the
-// brand, the three doors, and one "⋯ Settings" menu. A stitched match has its own layout
+// Page layout (the Floodlit design), as a landing page and three doors (doors/, SPEC 7). The
+// landing page, where a plain visit opens: the promise, the story's one button, the three doors in
+// a few lines each with every feature one link away. The look: the live screen fills the first
+// screen (the picture with the header, the moment card, the caption and the playback bar over
+// it), the story of the moment is the quick tour over it, and below it the moment's compare, its
+// commentary and the what-ifs (what used to introduce them is on the landing page). Your turn: a
+// hub whose three cards open the modes where the viewer is the player; each mode takes the screen
+// as it always has. For studios: four solutions, then their value, one step at a time. The header
+// is the same on every page: the brand (back to the landing page), the three doors, and one
+// "⋯ Settings" menu. A stitched match has its own layout
 // (MatchView): the same live screen with the score card, and every moment below; a hero moment's
 // breakdown opens over it as the hero layout with a way back (MatchApp).
 
@@ -14,17 +17,14 @@ import { DirectorAttach } from "./director/DirectorBar";
 import type { MatchSession } from "./match/matchSession";
 import { RecapCaption, RecapPanel, RecapStage } from "./recap/RecapPanel";
 import { GK_KITS } from "./players/kit";
-import { SessionContext, startClock, useBreakdown, useSession, useView } from "./session";
+import { SessionContext, startClock, useSession, useView } from "./session";
 import { createStore, useStore, type Store } from "./store/store";
 import type { LiveStatus } from "./live/feed";
 import { IntroCard } from "./ui/IntroCard";
 import { LiveBar, MomentsPanel, OfflineBadge } from "./ui/Live";
 import { BackToMatch, MatchPicker, OpeningNotice, Scoreboard } from "./ui/Match";
 import { Caption, EvidenceCard, NarrationPanel, SoundToggle } from "./ui/Narration";
-import { ArrowIcon, CheckIcon } from "./ui/icons";
 import { intro } from "./ui/intro";
-import { PERSONA_LABEL } from "./ui/labels";
-import { DecisionPanel, StoryPanel, VerdictPanel } from "./ui/Panels";
 import { RunToggle } from "./ui/RunToggle";
 import {
   blurbOf,
@@ -41,7 +41,7 @@ import {
 import { bindMatchSound, bindSound } from "./sound/bind";
 import { soundEngine } from "./sound/engine";
 import { StatsPanel } from "./ui/StatsPanel";
-import { ComparePanel } from "./journey/Journey";
+import { ASK_RUN_ID, ComparePanel } from "./journey/Journey";
 import { StatsTicker } from "./ui/StatsTicker";
 import { WithoutLookNote } from "./without/WithoutLook";
 import { TelemetryPanel } from "./ui/TelemetryPanel";
@@ -50,8 +50,7 @@ import { WhatIfPanel } from "./ui/WhatIfPanel";
 import { PovView } from "./views/PovView";
 import { BeliefMap, beliefPip } from "./views/BeliefMap";
 import { Tour, TourButton } from "./tour/Tour";
-import { envOf, quickTourFits } from "./tour/steps";
-import { resumeTour, startTour, tour } from "./tour/tourState";
+import { resumeTour, tour } from "./tour/tourState";
 import { TacticalView } from "./views/TacticalView";
 import { ScanStepsScreen, useStepThroughOpen } from "./steps/ScanSteps";
 import { TakeEyesScreen, useTakeEyesOpen } from "./takeeyes/TakeEyes";
@@ -62,15 +61,17 @@ import { TacticsLabPanel } from "./tacticslab/TacticsLab";
 import { usePersonalSync, YourViewLine, YourViewMenu } from "./personal/YourView";
 import { DrillScreen, useDrillOpen } from "./drill/Drill";
 import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
+import { SessionGlossary } from "./glossary/SessionGlossary";
 import { FloodlightBackground } from "./ui/FloodlightBackground";
 import { TextReveal } from "./ui/TextReveal";
 import { DoorTabs, ForStudios, TURN_CARD_ID, YourTurn } from "./doors/DoorPages";
+import { Landing } from "./doors/Landing";
 import { doors, openDoor } from "./doors/state";
 
 /** A hero moment: its door on screen, or a mode over all of them. `onBack`: inside a match. */
 export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => void }) {
   const session = useSession();
-  const { hero, playback, controls, moment, offset, runner } = session;
+  const { hero, playback, controls, moment, offset, runner, voice } = session;
   const [titleLead, titleEmphasis] = momentTitle(hero);
   const mode = useStore(playback, (s) => s.mode);
   const evidence = useStore(playback, (s) => s.evidenceLine);
@@ -119,35 +120,51 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
     };
   }, [playback, runner]);
   // A new door's page starts at its top, once it is laid out: a scroll still running from the
-  // last page (a tour step's) would land it part-way down.
+  // last page (a tour step's) would land it part-way down. If its focused tab was unmounted, the
+  // new current tab takes the keyboard instead of leaving it on the body.
   const doorSeq = useStore(doors, (s) => s.seq);
+  const previousDoor = useRef(door);
   useLayoutEffect(() => {
+    if (previousDoor.current !== door) {
+      const active = document.activeElement;
+      if (!active?.isConnected || active === document.body) {
+        document
+          .querySelector<HTMLElement>(`.door-tab[data-door="${door}"]`)
+          ?.focus({ preventScroll: true });
+      }
+      previousDoor.current = door;
+    }
     if (doorSeq > 0) jumpToTop();
-  }, [doorSeq]);
+  }, [door, doorSeq]);
   useEffect(() => {
     if (door === "look") return;
     controls.stopBreakdown();
     controls.leaveLive();
+    voice.stop();
     if (playback.get().playing) playback.set({ playing: false });
-  }, [door, controls, playback]);
+  }, [door, controls, playback, voice]);
   // The autoplay waits for the intro card: the key scan comes in the stream's first seconds and
   // must not play under it. Behind the card the picture rests on the first frame. Online: watch
   // live, then the show (the look, then the run without it) and the breakdown once the moment is
   // detected. Offline: the show and the bundled breakdown at once. Once per session: the card
   // never opens again. A tour started from the card drives the app itself: the autoplay would
-  // take its first step over (the step is set up before this effect runs).
+  // take its first step over (the step is set up before this effect runs). It waits for the
+  // landing page as for the card: it starts when the viewer opens The look, unless what opened it
+  // was a mode or a tour.
   const started = useRef(false);
+  const modeOpen = yourCall || takeEyes || scanSteps || drill;
   useEffect(() => {
     if (!autoplay || started.current) return;
     if (introOpen) {
       if (playback.get().frame !== 0) playback.set({ frame: 0 });
       return;
     }
+    if (door === "home") return;
     started.current = true;
-    if (tour.get().open || doors.get().door !== "look") return;
+    if (tour.get().open || door !== "look" || modeOpen) return;
     if (session.feed) controls.startLive();
     else controls.autoplay();
-  }, [autoplay, controls, introOpen, playback, session]);
+  }, [autoplay, controls, introOpen, playback, session, door, modeOpen]);
   useEffect(() => () => session.feed?.stop(), [session]);
 
   // A mode takes the screen, and hides what would give his decision away until the viewer has
@@ -164,81 +181,83 @@ export function App({ autoplay, onBack }: { autoplay: boolean; onBack?: () => vo
   ) : null;
 
   return (
-    <div
-      className={mode === "counterfactual" ? "app mode-cf" : "app"}
-      data-door={modeScreen ? undefined : door}
-      onClickCapture={(e) => {
-        const id = (e.target as Element).closest?.("button[id]")?.id;
-        if (id && OPENER_IDS.includes(id)) lastPressed.id = id;
-      }}
-    >
-      {modeScreen ??
-        (door === "look" ? (
-          <>
-            <LiveScreen
-              start={start}
-              end={<HeroSettings />}
-              run={<RunToggle />}
-              card={
-                evidence ? (
-                  <EvidenceCard />
-                ) : touring === "quick" ? (
-                  <div className="tour-home" aria-hidden="true" />
-                ) : touring ? null : (
-                  <MomentCard />
-                )
-              }
-              caption={
-                <>
-                  <Caption />
-                  <WithoutLookNote />
-                </>
-              }
-            />
-            <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
-              <FloodlightBackground />
-              <header className="moment-head">
-                <p className="kicker accent">
-                  {momentKicker(hero, moment.decisionFrame, offset).replace("Moment", "The moment")}
-                </p>
-                <h2 id="moment-title" tabIndex={-1}>
-                  <TextReveal>
-                    {titleLead} <em>{titleEmphasis}</em>
-                  </TextReveal>
-                </h2>
-                <p className="lede">
-                  <TextReveal>{blurbOf(hero)}</TextReveal>
-                </p>
-                <YourViewLine />
-                <StoryCta />
-              </header>
-              {/* The look and the run without it, side by side: the story's compare, kept. */}
-              <ComparePanel />
-              <div className="below">
-                <StoryPanel />
-                <DecisionPanel />
-                <VerdictPanel />
-                <NarrationPanel />
-                <WhatIfPanel />
-                {/* The data under the moment, one click away: no tour step points into it. */}
-                <details className="how match-data">
-                  <summary>Match data for this moment</summary>
-                  <TelemetryPanel />
-                  <StatsPanel />
-                  <MomentsPanel />
-                </details>
-              </div>
-            </main>
-          </>
-        ) : (
-          <DoorScreen start={start} end={<HeroSettings />}>
-            {door === "turn" ? <YourTurn /> : <ForStudios />}
-          </DoorScreen>
-        ))}
+    <SessionGlossary>
+      <div
+        className={mode === "counterfactual" ? "app mode-cf" : "app"}
+        data-door={modeScreen ? undefined : door}
+        onClickCapture={(e) => {
+          const id = (e.target as Element).closest?.("button[id]")?.id;
+          if (id && OPENER_IDS.includes(id)) lastPressed.id = id;
+        }}
+      >
+        {modeScreen ??
+          (door === "look" ? (
+            <>
+              <LiveScreen
+                start={start}
+                end={<HeroSettings />}
+                run={<RunToggle />}
+                card={
+                  evidence ? (
+                    <EvidenceCard />
+                  ) : touring === "quick" ? (
+                    <div className="tour-home" aria-hidden="true" />
+                  ) : touring ? null : (
+                    <MomentCard />
+                  )
+                }
+                caption={
+                  <>
+                    <Caption />
+                    <WithoutLookNote />
+                  </>
+                }
+              />
+              <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+                <FloodlightBackground />
+                <header className="moment-head">
+                  <p className="kicker accent">
+                    {momentKicker(hero, moment.decisionFrame, offset).replace(
+                      "Moment",
+                      "The moment",
+                    )}
+                  </p>
+                  <h2 id="moment-title" tabIndex={-1}>
+                    <TextReveal>
+                      {titleLead} <em>{titleEmphasis}</em>
+                    </TextReveal>
+                  </h2>
+                  <p className="lede">
+                    <TextReveal>{blurbOf(hero)}</TextReveal>
+                  </p>
+                  <YourViewLine />
+                </header>
+                {/* The look and the run without it, side by side: the story's compare, kept. The
+                  chapters that introduced the moment are the landing page's now. */}
+                <ComparePanel />
+                <div className="below">
+                  <NarrationPanel />
+                  <WhatIfPanel />
+                  {/* The data under the moment, one click away: no tour step points into it. */}
+                  <details className="how match-data">
+                    <summary>Match data for this moment</summary>
+                    <TelemetryPanel />
+                    <StatsPanel />
+                    <MomentsPanel />
+                  </details>
+                </div>
+              </main>
+            </>
+          ) : (
+            <DoorScreen start={start} end={<HeroSettings />}>
+              {door === "home" ? <Landing /> : door === "turn" ? <YourTurn /> : <ForStudios />}
+            </DoorScreen>
+          ))}
 
-      <Legend />
-      <Tour />
-    </div>
+        <Legend />
+        <Tour />
+      </div>
+    </SessionGlossary>
   );
 }
 
@@ -267,13 +286,14 @@ function HeroSettings() {
   );
 }
 
-/** The buttons that open a mode (the hub's cards, the compare's scan story): the one last pressed
- * is what closing its mode gives the keyboard back to. */
+/** The buttons that open a mode (the hub's cards, the compare's scan story, For studios' question
+ * about the run): the one last pressed is what closing its mode gives the keyboard back to. */
 const OPENER_IDS = [
   TURN_CARD_ID.yourCall,
   TURN_CARD_ID.takeEyes,
   TURN_CARD_ID.drill,
   "scan-steps-story",
+  ASK_RUN_ID,
 ];
 
 const lastPressed = { id: "" };
@@ -298,48 +318,31 @@ function useModeFocus(open: boolean, home: string, resume?: () => boolean) {
   }, [open, home, resume]);
 }
 
-/** Door 1's primary action under the picture: its story (the quick tour) from the start, where
- * the moment has one; else the breakdown played through his eyes. */
-function StoryCta() {
-  const session = useSession();
-  const { controls } = session;
-  const { narration, persona, status } = useBreakdown();
-  const checked = narration && !narration.fixture;
-  const story = quickTourFits(envOf(session));
-  return (
-    <div className="moment-cta">
-      <button
-        type="button"
-        className="btn btn-primary"
-        onClick={() => {
-          window.scrollTo({ top: 0 });
-          if (story) startTour(null, "quick");
-          else controls.playBreakdown();
-        }}
-      >
-        {story ? "Watch the look" : "Watch it through his eyes"}
-        <ArrowIcon />
-      </button>
-      {(status === "ready" || status === "failed") && (
-        <span className="written">
-          {checked && <CheckIcon />}
-          {checked
-            ? `Written for ${PERSONA_LABEL[persona]} · every number checked in code`
-            : "Bundled example · not checked by the verifier"}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/** The header on every door: the brand, `start` beside it (the offline badge, the way back to the
- * match, a match's live pill), the three doors, and `end` (Settings). */
+/** The header on every page: the brand (a link back to the landing page), `start` beside it (the
+ * offline badge, the way back to the match, a match's live pill), the three doors, and `end`
+ * (Settings). */
 function SiteHeader({ start, end }: { start: ReactNode; end: ReactNode }) {
+  const view = useView();
+  const home = useStore(doors, (s) => s.door === "home");
   return (
     <header className="stage-head">
       <div className="brand">
         {/* Focused when the intro card closes (IntroCard), never by Tab. */}
-        <h1 tabIndex={-1}>Through Their Eyes</h1>
+        <h1 tabIndex={-1}>
+          <a
+            className="brand-link"
+            href={`${import.meta.env.BASE_URL}?door=home`}
+            aria-current={home && view.kind === "hero" ? "page" : undefined}
+            onClick={(e) => {
+              // A stitched match is no door: the link loads the hero moment's landing page.
+              if (view.kind === "match" || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+              e.preventDefault();
+              openDoor("home", { address: true, focus: true });
+            }}
+          >
+            Through Their Eyes
+          </a>
+        </h1>
         <p className="sub">
           A synthetic match<span className="sub-more"> · every player fictional</span>
         </p>
@@ -485,58 +488,60 @@ function MatchView() {
   ); // the crowd, under the recap's voice
   const count = session.kind === "match" ? session.match.possessions.length : 0;
   return (
-    <div className="app match">
-      <LiveScreen
-        start={<LiveBar />}
-        end={
-          <SettingsMenu>
-            <MenuSection label="Moment">
-              <MomentChips />
-              <MatchPicker />
-            </MenuSection>
-            <MenuSection label="Your view">
-              <YourViewMenu />
-            </MenuSection>
-            <MenuSection label="Sound">
-              <SoundToggle />
-            </MenuSection>
-            <ViewOptions />
-          </SettingsMenu>
-        }
-        card={
-          <>
-            <Scoreboard />
-            <OpeningNotice />
-            <RecapStage />
-          </>
-        }
-        caption={<RecapCaption />}
-      />
+    <SessionGlossary>
+      <div className="app match">
+        <LiveScreen
+          start={<LiveBar />}
+          end={
+            <SettingsMenu>
+              <MenuSection label="Moment">
+                <MomentChips />
+                <MatchPicker />
+              </MenuSection>
+              <MenuSection label="Your view">
+                <YourViewMenu />
+              </MenuSection>
+              <MenuSection label="Sound">
+                <SoundToggle />
+              </MenuSection>
+              <ViewOptions />
+            </SettingsMenu>
+          }
+          card={
+            <>
+              <Scoreboard />
+              <OpeningNotice />
+              <RecapStage />
+            </>
+          }
+          caption={<RecapCaption />}
+        />
 
-      <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
-        <header className="moment-head">
-          <p className="kicker accent">The match · {count} possessions</p>
-          <h2 id="moment-title">
-            Every moment, <em>on one clock.</em>
-          </h2>
-          <p className="lede">
-            A whole match of {count} possessions, streamed live from the API. Every moment is on the
-            timeline and below; open a hero moment's breakdown to see the decision through the
-            player's eyes.
-          </p>
-          <YourViewLine />
-        </header>
-        <div className="below">
-          <StatsPanel />
-          <RecapPanel />
-          <TacticsLabPanel />
-          <MomentsPanel />
-        </div>
-      </main>
+        <main className="moment" id="moment" aria-labelledby="moment-title" inert={introOpen}>
+          <header className="moment-head">
+            <p className="kicker accent">The match · {count} possessions</p>
+            <h2 id="moment-title">
+              Every moment, <em>on one clock.</em>
+            </h2>
+            <p className="lede">
+              A whole match of {count} possessions, streamed live from the API. Every moment is on
+              the timeline and below; open a hero moment's breakdown to see the decision through the
+              player's eyes.
+            </p>
+            <YourViewLine />
+          </header>
+          <div className="below">
+            <StatsPanel />
+            <RecapPanel />
+            <TacticsLabPanel />
+            <MomentsPanel />
+          </div>
+        </main>
 
-      <Legend />
-      <Tour />
-    </div>
+        <Legend />
+        <Tour />
+      </div>
+    </SessionGlossary>
   );
 }
 

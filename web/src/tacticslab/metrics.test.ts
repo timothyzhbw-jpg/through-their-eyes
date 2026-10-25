@@ -1,27 +1,40 @@
 // The Tactics lab's metrics, on real exports from public/data: the blind-side hero's passes, the
 // pressure hero's forced runs (interceptions and a tackle) and the far-post hero's shot, plus the
-// bundled xT grid. Expected values are worked out here from the definitions, not read from the code.
+// bundled xT grid. fixture_match1_transitions.json is `uv run python -m sim.export --match 1`
+// run in python:3.11-slim: the sim is byte-identical only within one OS, so regenerate it on
+// linux/amd64, never on a Mac. Expected values are worked out here from the definitions, not read from the code.
 
 import { describe, expect, it } from "vitest";
 import raw from "../../public/data/hero_seed3.json";
 import withoutLook from "../../public/data/without_look_seed3.json";
 import pressWhatIf from "../../public/data/whatif_press_escape_seed0.json";
 import shotWhatIf from "../../public/data/whatif_far_post_finish_seed11.json";
+import statsFixture from "../stats/fixture_seed3.json";
+import { parseHero } from "../data/hero";
 import type { ExportEvent } from "../data/types";
+import matchFixture from "./fixture_match1_transitions.json";
 import {
+  MIN_BYPASSED,
+  PRESSED,
   PRESS_ZONE_FROM,
+  TRANSITION_WINDOW_S,
+  buildUpMetrics,
+  counterAttack,
   distanceXg,
   parseXtGrid,
   pressMetrics,
+  pressingIntensity,
   progression,
   regains,
   shotQuality,
   teamOf,
+  transitionAfterLoss,
   xtAt,
 } from "./metrics";
 
 const grid = parseXtGrid(withoutLook.xt);
 const heroEvents = raw.runs.factual.events as unknown as ExportEvent[];
+const match = parseHero(matchFixture);
 
 const optionEvents = (file: { options: { action: string }[] }, action: string): ExportEvent[] =>
   (file.options.find((o) => o.action === action) as unknown as { events: ExportEvent[] }).events;
@@ -199,5 +212,94 @@ describe("regains and the high press, on the pressure hero's forced runs", () =>
   it("reads the team off the player's letter", () => {
     expect(teamOf("H8")).toBe(0);
     expect(teamOf("A11")).toBe(1);
+  });
+});
+
+describe("the added tactics on the real match-1 fixture", () => {
+  it("rebuilds the exported pressure on the passer at the kick", () => {
+    const hero = parseHero(raw);
+    for (const cue of statsFixture.stats.cues.filter((c) => c.kind === "pass")) {
+      expect(pressingIntensity(hero, hero.runs.factual, cue.kick!, cue.player)).toBeCloseTo(
+        cue.components!.passer,
+        2,
+      );
+    }
+  });
+
+  it("measures the press_escape pass and the line it broke", () => {
+    const result = buildUpMetrics(match);
+    const pass = match.runs.factual.events.find((e) => e.id === "pass:H4:7734")!;
+    expect(PRESSED).toBe(0.7);
+    expect(MIN_BYPASSED).toBe(2);
+    expect(pressingIntensity(match, match.runs.factual, pass.frame, pass.player)).toBeCloseTo(
+      0.94,
+      2,
+    );
+    expect(result.teams[0]).toMatchObject({
+      pressured: 3,
+      completedPressured: 2,
+      lineBreaking: 1,
+      lineBreakingPressured: 1,
+    });
+    expect(result.best).toMatchObject({ id: pass.id, team: 0, bypassed: 5 });
+  });
+
+  it("selects the real counter: regain to final-third reception, passes and xT", () => {
+    const result = counterAttack(match, grid);
+    const win = regains(match.runs.factual.events).find((r) => r.id === "interception:A11:4924")!;
+    const pass = match.runs.factual.events.find((e) => e.id === "pass:A11:4948")!;
+    const reception = Number(pass.attrs.end);
+    const gained =
+      xtAt(grid, pass.attrs.end_at as [number, number], 1) -
+      xtAt(grid, pass.attrs.start as [number, number], 1);
+    expect(result.best).toMatchObject({
+      team: 1,
+      endFrame: reception,
+      endKind: "final_third",
+      passes: 1,
+    });
+    expect(result.best?.win.id).toBe(win.id);
+    expect(result.best?.seconds).toBeCloseTo((reception - win.frame) * match.dt, 9);
+    expect(result.best?.xtAdded).toBeCloseTo(gained, 9);
+    expect(result.best?.from).toEqual(win.at);
+    expect(result.best?.to).toEqual(pass.attrs.end_at);
+  });
+
+  it("returns no counter rather than calling an isolated regain an attack", () => {
+    expect(counterAttack(parseHero(raw), grid).best).toBeNull();
+    expect(
+      counterAttack(
+        { ...match, runs: { ...match.runs, factual: { ...match.runs.factual, events: [] } } },
+        grid,
+      ).best,
+    ).toBeNull();
+  });
+
+  it("measures the losing back line and the attackers' peak xT in the real window", () => {
+    const result = transitionAfterLoss(match, grid);
+    const best = result.best!;
+    const run = match.runs.factual;
+    const win = regains(run.events)[0];
+    const end = match.match!.possessions[0].start + match.match!.possessions[0].frames - 1;
+    const line = (frame: number) =>
+      Math.min(
+        ...match.players.flatMap((p, j) =>
+          p.team === 0 && p.role !== "GK" ? [run.pos[(frame * match.n + j) * 2]] : [],
+        ),
+      );
+    const peak = Math.max(
+      ...Array.from({ length: end - win.frame + 1 }, (_, i) =>
+        xtAt(grid, [run.ball[(win.frame + i) * 2], run.ball[(win.frame + i) * 2 + 1]], 1),
+      ),
+    );
+    expect(best.win.id).toBe(win.id);
+    expect(best.losingTeam).toBe(0);
+    expect(best.endFrame).toBe(end);
+    expect(best.seconds).toBeCloseTo((end - win.frame) * match.dt, 9);
+    expect(best.seconds).toBeLessThan(TRANSITION_WINDOW_S);
+    expect(best.spaceAtLoss).toBeCloseTo(line(win.frame) + 52.5, 9);
+    expect(best.spaceAtEnd).toBeCloseTo(line(end) + 52.5, 9);
+    expect(best.lineTowardGoal).toBeCloseTo(line(win.frame) - line(end), 9);
+    expect(best.xtPeak).toBeCloseTo(peak, 9);
   });
 });

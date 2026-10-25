@@ -58,7 +58,12 @@ const scoreBug = (p) =>
 
 /** Every screen, as a path and the steps from its load to the state that is checked. */
 const STATES = [
-  { name: "lineup-hero", path: "", ready: (p) => see(p.getByRole("dialog"), "the lineup card") },
+  {
+    name: "home",
+    path: "",
+    ready: (p) =>
+      see(p.getByRole("region", { name: /^One look over his shoulder/ }), "the landing page"),
+  },
   { name: "hero", path: "?intro=0&autoplay=0", ready: runSwitch },
   {
     name: "hero-viewer-menu",
@@ -106,9 +111,9 @@ const STATES = [
     ready: (p) => see(p.getByRole("tablist", { name: "Studio steps" }), "For studios' steps"),
   },
   {
-    name: "door-studios-crew",
-    path: "?step=crew",
-    ready: (p) => see(p.getByRole("tabpanel", { name: /Behind the scenes/ }), "Behind the scenes"),
+    name: "door-studios-commentary",
+    path: "?step=commentary",
+    ready: (p) => see(p.getByRole("tabpanel", { name: /Commentary/ }), "Personalised commentary"),
   },
   {
     name: "hero-playing",
@@ -116,7 +121,7 @@ const STATES = [
     ready: async (p) => {
       await runSwitch(p);
       // The live stream (6.6 s), then the breakdown with its captions.
-      await see(p.locator("button.caption"), "a caption");
+      await see(p.locator(".caption"), "a caption");
     },
   },
   {
@@ -124,6 +129,16 @@ const STATES = [
     path: "?persona=analyst&tamper=cf_value",
     ready: (p) =>
       see(p.getByRole("region", { name: "Evidence for this line" }), "the evidence card"),
+  },
+  {
+    name: "glossary-popover",
+    path: "?persona=analyst&tamper=cf_value",
+    ready: async (p) => {
+      const term = p.locator(".evidence-line .glossary-term").first();
+      await see(term, "a glossary term");
+      await term.focus();
+      await see(p.locator(".glossary-popover"), "the term definition");
+    },
   },
   {
     name: "yourcall-deciding",

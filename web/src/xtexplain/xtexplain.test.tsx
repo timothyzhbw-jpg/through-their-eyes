@@ -39,6 +39,7 @@ import {
 
 const hero = parseHero(raw);
 const grid = parseXtGrid(bundle.xt);
+const matchScope = { ...NO_SCOPE, match: hero };
 const SIZE = { cols: 16, rows: 12 };
 
 const mounted: { root: Root; container: HTMLElement }[] = [];
@@ -353,7 +354,7 @@ describe("where xT is explained", () => {
     expect(lookWorthMove(hero, 0.16)).toHaveLength(1);
   });
 
-  it("the Tactics lab's Progression card carries the explanation, per persona", () => {
+  it("the Tactics lab's build-up card carries the progression explanation, per persona", () => {
     const xt = parseXtGrid(bundle.xt);
     // The lab fetches its own copy of the grid too; answer it here so no request leaves the test.
     vi.stubGlobal("fetch", async () => json(bundle));
@@ -363,11 +364,13 @@ describe("where xT is explained", () => {
     ] as const) {
       const s = session();
       s.breakdown.set({ persona });
-      const page = mount(s, <TacticsLabPanel xt={xt} scope={NO_SCOPE} />);
+      const page = mount(s, <TacticsLabPanel xt={xt} scope={matchScope} />);
       act(() =>
-        [...page.querySelectorAll("button")].find((b) => text(b) === "Progression")!.click(),
+        [...page.querySelectorAll("button")]
+          .find((b) => text(b) === "Possession play / breaking the press")!
+          .click(),
       );
-      const card = page.querySelector('[data-card="progression"]')!;
+      const card = page.querySelector('[data-card="build_up"]')!;
       expect(card.querySelector("[data-xt-version]")!.getAttribute("data-xt-version")).toBe(
         version,
       );
@@ -375,21 +378,21 @@ describe("where xT is explained", () => {
   });
 
   it("the best pass is told for the team it came from", () => {
-    const card = buildCards(hero, grid, NO_SCOPE).find((c) => c.id === "progression")!;
+    const card = buildCards(hero, grid, matchScope).find((c) => c.id === "build_up")!;
     expect(card.xtMove!.team).toBe(0);
     expect(card.xtMove!.label).toBe("Best pass (Home)");
   });
 
-  it("the Progression card's best pass is a move between zones the card's numbers agree with", () => {
-    const cards = buildCards(hero, grid, NO_SCOPE);
-    const card = cards.find((c) => c.id === "progression")!;
+  it("the build-up card's best pass is a move between zones the card's numbers agree with", () => {
+    const cards = buildCards(hero, grid, matchScope);
+    const card = cards.find((c) => c.id === "build_up")!;
     expect(card.xtMove).toBeTruthy();
     const m = card.xtMove!;
     expect(m.delta).toBeCloseTo(m.to.xt! - m.from.xt!, 12);
-    const best = card.metrics.find((x) => x.label === "Best pass")!.values.join(" ");
+    const best = card.metrics.find((x) => x.label === "Progression · xT gained")!.pro;
     expect(best).toContain(m.delta! >= 0 ? `+${m.delta!.toFixed(3)}` : "−");
     expect(card.xtMove).toEqual(
-      buildCards(hero, grid, NO_SCOPE).find((c) => c.id === "progression")!.xtMove,
+      buildCards(hero, grid, matchScope).find((c) => c.id === "build_up")!.xtMove,
     );
   });
 });

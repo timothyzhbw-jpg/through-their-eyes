@@ -1,8 +1,9 @@
 // "Publish this moment" (SPEC 7): the moment as a content package. A highlight (the breakdown
 // reel's own shot list: nothing is encoded here), a tactical explainer card, social posts in en and
 // zh, data cards as PNG, and a Business value panel whose figures are a seeded simulation. It reads
-// the verified narration and the plan already on screen and calls no service. The journey
-// (journey/) shows the package in its Content step and the business panel in its Value step.
+// the verified narration and the plan already on screen and calls no service. For studios
+// (journey/) shows the package as its Automated Highlights and the business panel as its Value's
+// demo KPIs.
 
 import { useMemo, useState } from "react";
 import { renameIds } from "../data/roster";
@@ -71,8 +72,8 @@ export function StudioPanel() {
 }
 
 /** The package without its business panel: the language, the highlight, the explainer, the posts
- * and the data cards. */
-export function StudioPackage() {
+ * and the data cards. `postsNote`: a line under the posts' heading saying what they are for. */
+export function StudioPackage({ postsNote }: { postsNote?: string } = {}) {
   const explainer = useReveal<HTMLElement>();
   const { hero, moment, controls, possession } = useSession();
   const { narration, resolved, script, language: spoken } = useBreakdown();
@@ -229,6 +230,7 @@ export function StudioPackage() {
         <h3 id="studio-posts" className="block-title">
           3 · Social posts
         </h3>
+        {postsNote && <p className="note">{postsNote}</p>}
         {POST_FORMATS.map((format, index) => (
           <SocialPost
             key={format}
@@ -332,8 +334,14 @@ function DataCard({
 
 /** The business panel: the seeded audience's figures, each labelled demo data, and their
  * assumptions. Only with a verified breakdown on screen, like the package it would measure.
- * `numbered`: headed as the package's fifth part. */
-export function BusinessValue({ numbered = false }: { numbered?: boolean }) {
+ * `numbered`: headed as the package's fifth part; `heading`: its heading otherwise. */
+export function BusinessValue({
+  numbered = false,
+  heading = "Business value",
+}: {
+  numbered?: boolean;
+  heading?: string;
+}) {
   const { hero, moment, possession } = useSession();
   const { narration, persona, language: spoken } = useBreakdown();
   const momentId = possession?.moment ?? moment.id;
@@ -352,7 +360,7 @@ export function BusinessValue({ numbered = false }: { numbered?: boolean }) {
   return (
     <section className="studio-block studio-business" aria-labelledby="studio-business">
       <h3 id="studio-business" className="block-title">
-        {numbered ? "5 · Business value" : "Business value"}
+        {numbered ? "5 · Business value" : heading}
       </h3>
       <DemoBadge />
       <dl className="tile-grid studio-metrics">

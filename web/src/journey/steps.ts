@@ -1,27 +1,57 @@
-// The studios' journey (SPEC 7, door 3 of doors/): one moment, followed from why its tactics work
-// to what it is worth off the pitch, then the AI crew behind it. Four steps, in order: Tactics (the
-// Tactics lab), Content (the package and the stadium's screens), Value (the business panel and the
-// sponsor slots) and Behind the scenes (the crew's breakdown, its evidence and the failure drill).
-// The old journey's Event step is door 1 and its Your view is in Settings (doors/doors.ts maps
-// their addresses). Pure: the ids, their order, the keys that move between them and the address
-// that opens one.
+// The studios' door (SPEC 7, door 3 of doors/): what the moment is worth to the league, as four
+// solutions and then their value. A · AI Tactical Broadcast (the Tactics lab, asked a broadcast's
+// questions), B · AI Personalised Commentary (the audiences and languages, and the crew that writes
+// them), C · AI Automated Highlights (the content package for the league's channels), D · AI
+// Stadium Experience (the stadium's screens), then Value (the league's revenue levers, then the
+// demo KPIs). The old studio steps' addresses land on the section that holds their panel now
+// (LEGACY_STUDIO_STEPS); the older journey's Event step is door 1 and its Your view is in
+// Settings (doors/doors.ts maps their addresses). Pure: the ids, their order, the keys that move
+// between them and the address that opens one.
 
-export const JOURNEY_STEPS = ["tactics", "content", "value", "crew"] as const;
+export const JOURNEY_STEPS = ["broadcast", "commentary", "highlights", "stadium", "value"] as const;
 export type JourneyStep = (typeof JOURNEY_STEPS)[number];
 
+/** The tab's short name. */
 export const STEP_LABEL: Record<JourneyStep, string> = {
-  tactics: "Tactics",
-  content: "Content",
+  broadcast: "Tactical broadcast",
+  commentary: "Commentary",
+  highlights: "Highlights",
+  stadium: "Stadium",
   value: "Value",
-  crew: "Behind the scenes",
 };
 
-/** What each step opens, in a few words (the bar's tooltips and the stepper's second line). */
+/** The solution's letter (A–D); Value, which sums them up, has none. */
+export const STEP_MARK: Record<JourneyStep, string | null> = {
+  broadcast: "A",
+  commentary: "B",
+  highlights: "C",
+  stadium: "D",
+  value: null,
+};
+
+/** The section's full name: its kicker. */
+export const STEP_TITLE: Record<JourneyStep, string> = {
+  broadcast: "AI Tactical Broadcast",
+  commentary: "AI Personalised Commentary",
+  highlights: "AI Automated Highlights",
+  stadium: "AI Stadium Experience",
+  value: "Value",
+};
+
+/** What each section opens, in a few words (the bar's tooltips). */
 export const STEP_NOTE: Record<JourneyStep, string> = {
-  tactics: "Why the tactics in it work",
-  content: "The content package and the stadium screens",
-  value: "The business panel and the sponsor slots",
-  crew: "The AI crew: its breakdown, the evidence and the failure drill",
+  broadcast: "Tactics explained on air: the Tactics lab, asked a broadcast's questions",
+  commentary: "Commentary per fan and language, and the AI crew that writes it",
+  highlights: "Highlights, captions and posts for the league's channels, landscape and vertical",
+  stadium: "The stadium's screens on matchday",
+  value: "The league's revenue levers, then the demo KPIs",
+};
+
+/** The studio steps before the four solutions, and the section that holds their panel now. */
+export const LEGACY_STUDIO_STEPS: Readonly<Record<string, JourneyStep>> = {
+  tactics: "broadcast",
+  content: "highlights",
+  crew: "commentary",
 };
 
 export const parseStep = (v: string | null | undefined): JourneyStep | null =>
