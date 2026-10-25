@@ -172,6 +172,9 @@ interface CaptionedLine {
   frame: number;
 }
 
+/** The widest viewport that keeps only the on-picture caption is just below this (styles.css). */
+export const STORY_MIN_W = 1360;
+
 /** The lines already captioned in this playback, beside the picture on desktop. */
 export function CaptionStory() {
   const { playback, controls } = useSession();
@@ -180,13 +183,13 @@ export function CaptionStory() {
   const open = useStore(playback, (s) => s.evidenceLine);
   const on = useStore(captionStoryPrefs, (s) => s.on);
   const [desktop, setDesktop] = useState(
-    () => typeof window !== "undefined" && window.innerWidth >= 1100,
+    () => typeof window !== "undefined" && window.innerWidth >= STORY_MIN_W,
   );
   const [entries, setEntries] = useState<CaptionedLine[]>([]);
   const list = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
-    const update = () => setDesktop(window.innerWidth >= 1100);
+    const update = () => setDesktop(window.innerWidth >= STORY_MIN_W);
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
@@ -229,6 +232,9 @@ export function CaptionStory() {
   return (
     <aside className="caption-story" aria-label="The story so far">
       <h2>The story so far</h2>
+      {entries.length === 0 && (
+        <p className="caption-story-empty">The commentary's lines collect here as it plays.</p>
+      )}
       <ol ref={list}>
         {entries.map((entry) => {
           const line = lineOf(narration, entry.id);

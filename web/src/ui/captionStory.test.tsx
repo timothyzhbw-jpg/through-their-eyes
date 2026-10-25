@@ -57,7 +57,7 @@ function caption(session: Session, frame: number, line: string | null) {
 
 describe("the story so far", () => {
   it("is wired into The look's live screen beside the unchanged caption", () => {
-    window.innerWidth = 1200;
+    window.innerWidth = 1440;
     const session = offline();
     const page = mount(session, <App autoplay={false} />);
     caption(session, 10, "L1");
@@ -67,7 +67,7 @@ describe("the story so far", () => {
   });
 
   it("accumulates captioned lines oldest first, highlights the current one, and keeps its tick", () => {
-    window.innerWidth = 1200;
+    window.innerWidth = 1440;
     const session = offline();
     const current = session.breakdown.get().narration!;
     session.breakdown.set({ narration: { ...current, fixture: false } });
@@ -88,7 +88,7 @@ describe("the story so far", () => {
   });
 
   it("drops lines after the playhead on a backward seek and does not duplicate them on replay", () => {
-    window.innerWidth = 1200;
+    window.innerWidth = 1440;
     const session = offline();
     const page = mount(session, <CaptionStory />);
     caption(session, 10, "L1");
@@ -103,7 +103,7 @@ describe("the story so far", () => {
   });
 
   it("clears when the run changes", () => {
-    window.innerWidth = 1200;
+    window.innerWidth = 1440;
     const session = offline();
     const page = mount(session, <CaptionStory />);
     caption(session, 10, "L1");
@@ -115,7 +115,7 @@ describe("the story so far", () => {
   });
 
   it("hides from the View options switch and remembers the choice", () => {
-    window.innerWidth = 1200;
+    window.innerWidth = 1440;
     const session = offline();
     const page = mount(
       session,
@@ -138,8 +138,8 @@ describe("the story so far", () => {
     expect(captionStoryPrefs.get().on).toBe(false);
   });
 
-  it("renders nothing below 1100 px and leaves the on-picture caption alone", () => {
-    window.innerWidth = 1099;
+  it("renders nothing below 1360 px and leaves the on-picture caption alone", () => {
+    window.innerWidth = 1359;
     const session = offline();
     const page = mount(
       session,
@@ -154,8 +154,8 @@ describe("the story so far", () => {
     expect(page.querySelector(".caption .caption-text")).not.toBeNull();
   });
 
-  it("renders at exactly 1100 px", () => {
-    window.innerWidth = 1100;
+  it("renders at exactly 1360 px", () => {
+    window.innerWidth = 1360;
     const session = offline();
     const page = mount(session, <CaptionStory />);
     caption(session, 10, "L1");

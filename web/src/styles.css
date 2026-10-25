@@ -1571,8 +1571,9 @@ optgroup {
   color: var(--ink);
 }
 
-/* The story so far: a solid, quiet column beside the picture, never a second live region. */
-@media (min-width: 1100px) {
+/* The story so far: a solid, quiet column beside the picture, never a second live region. From
+   1360 px only, so a small laptop keeps the whole picture. */
+@media (min-width: 1360px) {
   .stage:has(.caption-story) {
     --story-w: clamp(250px, 22vw, 320px);
   }
@@ -4192,4 +4193,11 @@ optgroup {
     opacity: 1;
     transform: none;
   }
+}
+
+.caption-story-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
