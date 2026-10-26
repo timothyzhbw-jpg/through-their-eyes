@@ -300,8 +300,8 @@ function Chip(props: { name: Toggle; label: string; title: string; disabled?: bo
   );
 }
 
-const SPEEDS = [0.25, 0.5, 1];
-const MATCH_SPEEDS = [0.5, 1, 2, 4]; // a whole match is long: faster, no slow motion
+export const SPEEDS = [0.25, 0.5, 1];
+export const MATCH_SPEEDS = [0.5, 1, 2, 4]; // a whole match is long: faster, no slow motion
 
 /** Playback speed: slow motion for a moment, faster for a whole match. */
 function SpeedOption() {
@@ -761,9 +761,7 @@ export function MomentCard() {
     if (!moved.current) return;
     moved.current = false;
     if (closed) return chip.current?.focus({ preventScroll: true });
-    // Back on the card's action; while the breakdown loads (disabled), on the card itself.
-    const action = card.current?.querySelector<HTMLButtonElement>(".btn-primary:not(:disabled)");
-    (action ?? card.current)?.focus({ preventScroll: true });
+    card.current?.querySelector<HTMLButtonElement>(".moment-close")?.focus({ preventScroll: true });
   }, [closed]);
   const setClosed = (value: boolean) => {
     moved.current = true;
@@ -779,7 +777,7 @@ export function MomentCard() {
         onClick={() => setClosed(false)}
       >
         <i className="dot" aria-hidden="true" />
-        Show the moment
+        Show the moment card
       </button>
     );
   }
@@ -839,6 +837,14 @@ function MomentCardBody({
         onClose();
       }}
     >
+      <button
+        type="button"
+        className="icon-btn moment-close"
+        aria-label="Hide the moment card"
+        onClick={onClose}
+      >
+        ×
+      </button>
       {left ? (
         <>
           <h2>You left the stream.</h2>
