@@ -1592,11 +1592,6 @@ optgroup {
   .stage:has(.caption-story) .stage-card {
     right: calc(var(--story-w) + var(--gutter));
   }
-  /* Centred in the room left of the card, so the outcome line under the switch never runs under
-     the card. */
-  .stage:has(.caption-story) .stage-run {
-    left: calc(var(--gutter) + (100% - var(--story-w) - var(--card-w) - 3 * var(--gutter)) / 2);
-  }
   .stage:has(.caption-story) .stage-caption {
     left: calc((100% - var(--story-w)) / 2);
     width: min(880px, calc(100% - var(--story-w) - 2 * var(--gutter)));
@@ -1660,6 +1655,15 @@ optgroup {
   }
   .caption-story .caption-more.check {
     transition: none;
+  }
+}
+/* With the story column the run switch always sits under the header (as it does from 1181 to
+   1760 px without it), centred in the room left of the card: wider, it would rise into the header
+   beside the door tabs; centred on the picture, its outcome line ran under the card. */
+@media (min-width: 1360px) {
+  .stage:has(.caption-story) .stage-run {
+    top: 84px;
+    left: calc(var(--gutter) + (100% - var(--story-w) - var(--card-w) - 3 * var(--gutter)) / 2);
   }
 }
 
