@@ -135,6 +135,14 @@
   color: var(--chalk);
   text-align: left;
 }
+.turn-card-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--r-media);
+}
 .turn-card:hover:not(:disabled) {
   background: rgba(239, 237, 229, 0.08);
   box-shadow: inset 0 0 0 1px var(--hairline-strong);

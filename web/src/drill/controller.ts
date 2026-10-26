@@ -226,6 +226,8 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): Drill {
     const yc: YourCall = {
       session: { ...session, hero: callHero },
       state: ycState,
+      playback,
+      stage: () => ({ ...yc.session, playback }),
       options,
       picture: pictureOf(callHero),
       unavailable: null,

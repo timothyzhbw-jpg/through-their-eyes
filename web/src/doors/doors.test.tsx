@@ -219,6 +219,25 @@ describe("Your turn", () => {
     expect(hub.querySelector(".btn-primary")).toBeNull();
   });
 
+  it("gives each card a meaningful, lazy picture above its title at a fixed aspect ratio", () => {
+    act(() => doors.set({ door: "turn", seq: 0 }));
+    const page = mount(offline());
+    const images = [...page.querySelectorAll<HTMLImageElement>(".turn-card-image")];
+    expect(images.map((image) => image.getAttribute("src"))).toEqual([
+      "/img/turn/yourcall.webp",
+      "/img/turn/eyes.webp",
+      "/img/turn/drill.webp",
+    ]);
+    for (const image of images) {
+      expect(image.alt.length).toBeGreaterThan(20);
+      expect(image.loading).toBe("lazy");
+      expect([image.width, image.height]).toEqual([960, 540]);
+      expect(image.nextElementSibling?.classList.contains("turn-card-title")).toBe(true);
+    }
+    expect(doorsCss).toMatch(/\.turn-card-image\s*\{[^}]*aspect-ratio:\s*16\s*\/\s*9/);
+    expect(doorsCss).toMatch(/\.turn-card\s*\{[^}]*flex-direction:\s*column/);
+  });
+
   it("says why a card cannot open on a moment without its data", () => {
     act(() => doors.set({ door: "turn", seq: 0 }));
     const other = { ...pressureExport(), seed: 7 }; // no bundled look grid on this seed

@@ -17,9 +17,10 @@ import {
   type RefObject,
 } from "react";
 import type { Vec2 } from "../data/types";
-import { useBreakdown, useSession } from "../session";
+import { SessionContext, useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { KindTag } from "../ui/Narration";
+import { PovView } from "../views/PovView";
 import { LANGUAGES, type Language } from "../whatif/whatif";
 import { declutter, frameCall, markerAt, project, swipePick, toWorld } from "./camera";
 import { startYourCallClock, yourCallOf, type YourCall } from "./controller";
@@ -193,6 +194,7 @@ export function CallView({
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const stale = new Set(picture!.players.filter((p) => p.stale).map((p) => p.id));
   const deciding = step === "deciding";
+  const [povMain, setPovMain] = useState(false);
   // The markers come up with his picture, not on an empty view before it has drawn (a new WebGL
   // context and its shaders take a few hundred milliseconds); without WebGL, after a moment.
   const [drawn, setDrawn] = useState(false);
@@ -227,18 +229,35 @@ export function CallView({
     >
       <div ref={ref} className="yc-canvas">
         {scene && (
-          <Canvas
-            frameloop="demand"
-            dpr={[1, 2]}
-            gl={{ antialias: true }}
-            camera={{ fov: camera.fov, near: camera.near, far: camera.far }}
-            fallback={<p className="no-webgl">This view needs WebGL.</p>}
-          >
-            <YourCallScene yc={yc} pose={camera} />
-            <FirstFrame onDrawn={() => setDrawn(true)} />
-          </Canvas>
+          <>
+            <div className={povMain ? "yc-slot pip" : "yc-slot main"} data-view="above">
+              <Canvas
+                frameloop="demand"
+                dpr={[1, 2]}
+                gl={{ antialias: true }}
+                camera={{ fov: camera.fov, near: camera.near, far: camera.far }}
+                fallback={<p className="no-webgl">This view needs WebGL.</p>}
+              >
+                <YourCallScene yc={yc} pose={camera} />
+                <FirstFrame onDrawn={() => setDrawn(true)} />
+              </Canvas>
+            </div>
+            <SessionContext.Provider value={yc.stage()}>
+              <div className={povMain ? "yc-slot main" : "yc-slot pip"} data-view="first-person">
+                <PovView />
+              </div>
+            </SessionContext.Provider>
+          </>
         )}
-        {deciding && aimed && (
+        <button
+          type="button"
+          className="btn yc-view-swap"
+          aria-pressed={povMain}
+          onClick={() => setPovMain((on) => !on)}
+        >
+          {povMain ? "From above" : "First person"}
+        </button>
+        {deciding && !povMain && aimed && (
           <svg className="yc-path" width={w} height={h} aria-hidden="true">
             <polyline
               points={pathPoints(aimed, carrier.truth, camera, w, h)}
@@ -246,7 +265,7 @@ export function CallView({
             />
           </svg>
         )}
-        {deciding && (
+        {deciding && !povMain && (
           <div
             className="yc-swipe"
             aria-hidden="true"
@@ -282,7 +301,7 @@ export function CallView({
           />
         )}
         {/* Under the markers: it never hides one. */}
-        {deciding && (
+        {deciding && !povMain && (
           <p
             className="yc-you"
             aria-hidden="true"
@@ -291,7 +310,7 @@ export function CallView({
             {shortName(carrier.id)} · you
           </p>
         )}
-        {deciding && (
+        {deciding && !povMain && (
           <div
             className="yc-markers"
             role="group"
