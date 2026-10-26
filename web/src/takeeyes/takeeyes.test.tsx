@@ -39,7 +39,29 @@ import { takeEyesOf, type Fetch } from "./controller";
 import { NO_GRID } from "./looks";
 import { TakeEyesButton, TakeEyesStage } from "./TakeEyes";
 
-vi.mock("../views/PovView", () => ({ PovView: () => <div className="pov-stub" /> }));
+vi.mock("../views/PovView", async () => {
+  const { useView } = await import("../session");
+  const { useStore } = await import("../store/store");
+  return {
+    PovView: () => {
+      const { hero, playback } = useView();
+      const frame = useStore(playback, (s) => s.frame);
+      const mode = useStore(playback, (s) => s.mode);
+      const run = hero.runs[mode];
+      const lookFrame = Math.min(run.frames - 1, (hero.keyScan?.start ?? 0) + 6);
+      const lookHead = run.head[lookFrame * hero.n + hero.hero];
+      return (
+        <div
+          className="pov-stub"
+          data-frame={frame}
+          data-mode={mode}
+          data-look-head={lookHead}
+          data-look-start={hero.keyScan?.start}
+        />
+      );
+    },
+  };
+});
 vi.mock("../views/TacticalView", () => ({ TacticalView: () => <div className="tac-stub" /> }));
 vi.mock("@react-three/fiber", async (original) => ({
   ...(await original<typeof import("@react-three/fiber")>()),
@@ -122,9 +144,9 @@ describe("Take his eyes: opening", () => {
       playing: false,
       frame: session.moment.decisionFrame,
     });
-    // The stage shows his picture at the chosen time, with no look yet.
+    // The stage previews his picture at the chosen time, with the chosen look.
     expect(te.playback.get()).toMatchObject({ mode: "counterfactual", frame: 50, playing: false });
-    expect(te.stage()!.hero.runs.counterfactual.decision?.chosen).toBe("pass:H4");
+    expect(te.stage()!.hero.runs.counterfactual.decision?.chosen).toBe("pass:H9");
   });
 
   it("says why it cannot open on a moment with no bundled grid", () => {
@@ -210,6 +232,32 @@ describe("Take his eyes: choosing", () => {
 });
 
 describe("Take his eyes: looking and the result", () => {
+  it("keeps the corner on the picked look and the main view's frame through view swaps", async () => {
+    const session = offline();
+    const te = takeEyesOf(session, served, "/data/");
+    const el = mount(session, <TakeEyesStage />);
+    act(() => te.open());
+    await act(settle);
+    const pip = () => el.querySelector<HTMLElement>(".te-slot.pip .pov-stub")!;
+    const firstHead = pip().dataset.lookHead;
+    expect(pip().dataset).toMatchObject({ frame: "50", mode: "counterfactual" });
+
+    act(() => te.pick({ offset: 90 }));
+    expect(pip().dataset.lookHead).not.toBe(firstHead);
+    act(() => te.pick({ frame: 60 }));
+    expect(pip().dataset).toMatchObject({
+      frame: "60",
+      mode: "counterfactual",
+      lookStart: "60",
+    });
+
+    click(button(el, "Look"));
+    expect(el.querySelector<HTMLElement>(".te-slot.main .pov-stub")!.dataset.frame).toBe("52");
+    click(button(el, "See what he does"));
+    expect(te.playback.get()).toMatchObject({ mode: "factual", frame: 75 });
+    expect(pip().dataset).toMatchObject({ frame: "75", mode: "counterfactual" });
+  });
+
   it("Enter looks: the stage plays the look's run through his eyes up to his decision", async () => {
     const { te, el } = await opened();
     key(checked(el, "Where J. Ferriday looks")!, "Enter");

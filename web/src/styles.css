@@ -1371,6 +1371,7 @@ optgroup {
 }
 /* lighter than the other cards: a thin veil, no outline, the picture shows through */
 .moment-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1386,6 +1387,18 @@ optgroup {
 }
 .moment-card .card-actions {
   margin-top: 4px;
+}
+/* Above the card's heading, which is positioned and drawn later (it took the click). */
+.moment-card .moment-close {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  right: 8px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  color: var(--chalk);
+  font: 400 24px/1 var(--font-body);
 }
 .card-head {
   display: flex;
@@ -1407,6 +1420,7 @@ optgroup {
 }
 .moment-card h2 {
   margin: 0;
+  padding-right: 32px;
   font: 400 28px/1.06 var(--font-display);
   letter-spacing: -0.02em;
   text-wrap: balance;
@@ -1704,6 +1718,20 @@ optgroup {
 .play:hover {
   background: #fff;
 }
+.transport-speed {
+  flex: none;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: var(--r-control);
+  background: var(--chalk);
+  color: var(--ink);
+  font: 600 13px/1 var(--font-data);
+  white-space: nowrap;
+}
+.transport-speed:hover {
+  background: #fff;
+}
 /* the time and frame: only while the timeline is hovered or focused (it keeps its place, so the
    bar does not move when it shows) */
 .clock {
@@ -1868,7 +1896,7 @@ optgroup {
     order: -2;
   }
   .transport:has(.play) .timeline {
-    flex-basis: calc(100% - 64px);
+    flex-basis: calc(100% - 116px);
   }
 }
 
@@ -3272,6 +3300,30 @@ optgroup {
   color: var(--chalk-2);
   pointer-events: none;
 }
+.blind-side-key {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 380px;
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: var(--r-tag);
+  background: rgba(8, 14, 11, 0.85);
+  color: var(--chalk);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+.blind-side-key i {
+  flex: none;
+  width: 24px;
+  height: 2px;
+  margin-top: 7px;
+  background: var(--alert);
+}
+.focus-tactical .blind-side-key {
+  grid-column: 1 / -1;
+}
 .blind-tag {
   position: absolute;
   transform: translate(-50%, 14px);
@@ -3715,6 +3767,10 @@ optgroup {
   }
   .transport .play {
     width: 44px;
+    height: 44px;
+  }
+  .transport-speed {
+    min-width: 44px;
     height: 44px;
   }
   .transport .timeline,
