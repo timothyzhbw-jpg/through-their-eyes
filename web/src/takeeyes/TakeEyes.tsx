@@ -11,6 +11,7 @@
 
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
@@ -22,7 +23,8 @@ import { shortName } from "../data/roster";
 import type { Vec2 } from "../data/types";
 import type { Narration } from "../narration/payload";
 import { toPitch, toScreen } from "../options/passOptions";
-import { SessionContext, useBreakdown, useSession } from "../session";
+import { SessionContext, useBreakdown, useSession, type ViewSession } from "../session";
+import type { PlaybackState, PlaybackStore } from "../store/playback";
 import { useStore } from "../store/store";
 import { isVerified, KindTags, LineText, lineClaims } from "../ui/Narration";
 import { Segmented } from "../ui/Segmented";
@@ -143,6 +145,32 @@ export function TakeEyesStage({ scene = true }: { scene?: boolean }) {
 
 // ---------- the views: the board with the dial, his eyes, the timeline ----------
 
+function selectedPlayback(playback: PlaybackStore): PlaybackStore {
+  let source: PlaybackState | null = null;
+  let selected: PlaybackState | null = null;
+  return {
+    get() {
+      const s = playback.get();
+      if (s !== source) {
+        source = s;
+        selected = { ...s, mode: "counterfactual", whatIf: null };
+      }
+      return selected!;
+    },
+    set: playback.set,
+    subscribe: playback.subscribe,
+  };
+}
+
+function SelectedPov({ stage }: { stage: ViewSession }) {
+  const playback = useMemo(() => selectedPlayback(stage.playback), [stage]);
+  return (
+    <SessionContext.Provider value={{ ...stage, playback }}>
+      <PovView />
+    </SessionContext.Provider>
+  );
+}
+
 function EyesView({ te, scene }: { te: TakeEyes; scene: boolean }) {
   const looks = te.looks()!;
   const s = useStore(te.state, (x) => x);
@@ -155,9 +183,9 @@ function EyesView({ te, scene }: { te: TakeEyes; scene: boolean }) {
     <figure className={`te-view step-${s.step}`} aria-label="The moment, with your look">
       <div className="te-stage">
         {scene && stage && (
-          <SessionContext.Provider value={stage}>
+          <SessionContext.Provider key={te.shown()?.id ?? "none"} value={stage}>
             <div className={board ? "te-slot pip" : "te-slot main"}>
-              <PovView />
+              <SelectedPov stage={stage} />
             </div>
             <div className={board ? "te-slot main" : "te-slot pip"}>
               <TacticalView />

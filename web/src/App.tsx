@@ -61,6 +61,7 @@ import { TacticsLabPanel } from "./tacticslab/TacticsLab";
 import { usePersonalSync, YourViewLine, YourViewMenu } from "./personal/YourView";
 import { DrillScreen, useDrillOpen } from "./drill/Drill";
 import { StageSkeletonKey } from "./skeleton/SkeletonLegend";
+import { StageBlindSideKey } from "./ui/BlindSideOverlay";
 import { SessionGlossary } from "./glossary/SessionGlossary";
 import { FloodlightBackground } from "./ui/FloodlightBackground";
 import { TextReveal } from "./ui/TextReveal";
@@ -437,6 +438,7 @@ function LiveScreen(props: {
           <StageHud />
           <StatsTicker />
           <StageSkeletonKey />
+          <StageBlindSideKey />
         </div>
         {props.run && <div className="stage-run">{props.run}</div>}
         {props.caption && <div className="stage-caption">{props.caption}</div>}
