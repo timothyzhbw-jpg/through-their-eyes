@@ -194,6 +194,47 @@ describe("Your call: opening", () => {
 });
 
 describe("Your call: deciding", () => {
+  it("swaps his eyes and the elevated picture with a pressed, keyboard-reachable button", () => {
+    const { session } = open();
+    const el = mount(session, <YourCallStage />);
+    const above = () => el.querySelector('[data-view="above"]')!;
+    const eyes = () => el.querySelector('[data-view="first-person"]')!;
+    const swap = () => button(el, "First person");
+    expect(above().className).toBe("yc-slot main");
+    expect(eyes().className).toBe("yc-slot pip");
+    expect(swap().tagName).toBe("BUTTON");
+    expect(swap().getAttribute("aria-pressed")).toBe("false");
+    act(() => swap().focus());
+    expect(document.activeElement).toBe(swap());
+    click(swap());
+    expect(above().className).toBe("yc-slot pip");
+    expect(eyes().className).toBe("yc-slot main");
+    expect(button(el, "From above").getAttribute("aria-pressed")).toBe("true");
+    click(button(el, "From above"));
+    expect(above().className).toBe("yc-slot main");
+    expect(eyes().className).toBe("yc-slot pip");
+  });
+
+  it("keeps the first-person corner at the decision with no pass line or outcome before the pick", () => {
+    const { session, yc } = open();
+    const el = mount(session, <YourCallStage />);
+    const corner = el.querySelector(".yc-slot.pip")!;
+    expect(corner.getAttribute("data-view")).toBe("first-person");
+    expect(corner.querySelector(".pov-stub")).not.toBeNull();
+    expect(corner.querySelector(".yc-path, .yc-marker, .yc-versus, .yc-lines")).toBeNull();
+    expect(yc.playback.get()).toMatchObject({
+      frame: session.moment.decisionFrame,
+      playing: false,
+      options: false,
+      whatIf: null,
+      camera: "pov",
+      povPlayer: session.hero.heroId,
+    });
+    act(() => yc.aim(yc.options.find((o) => o.factual)!.action));
+    expect(yc.playback.get().frame).toBe(session.moment.decisionFrame);
+    expect(corner.querySelector(".yc-path, .yc-marker, .yc-versus, .yc-lines")).toBeNull();
+  });
+
   it("marks every option with a focusable, named button, and shows no number", () => {
     const { session, yc } = open();
     const el = mount(session);

@@ -14,8 +14,8 @@ At a glance (v1, built on Linux, `python:3.11-slim`, the canonical platform):
 | Matches | 10 stitched matches, match seeds 5001–5010 |
 | Play | 134.6 min in all; 13:26–13:29 per match; 19 possessions each |
 | Frames | 201,949 at 25 Hz; 4,442,878 player rows |
-| Events | 103,250: 62,470 scans, 31,283 head turns, 2,991 passes, 2,193 receptions, 715 interceptions, 716 possession changes, 2,659 pressure spells, 190 restarts, 1 ball out of play, 10 shots, 10 keeper dives, 9 goals, 2 balls off the post, 1 tackle |
-| Perception | 2,193 receptions, each with the receiver's scans in the 10 s before it and his belief about all 21 other players (46,053 rows) |
+| Events | 103,229: 62,472 scans, 31,295 head turns, 2,993 passes, 2,195 receptions, 712 interceptions, 713 possession changes, 2,626 pressure spells, 190 restarts, 1 ball out of play, 10 shots, 10 keeper dives, 9 goals, 2 balls off the post, 1 tackle |
+| Perception | 2,195 receptions, each with the receiver's scans in the 10 s before it and his belief about all 21 other players (46,095 rows) |
 | Decisions | 30 decisions on belief, with all 339 options weighed |
 | Archive | `through-their-eyes-synthetic-matches-v1.tar.gz`, about 74 MB |
 | Licence | **TODO(Bowen):** proposed CC BY 4.0 for the data; the code stays MIT ([§ Licence](#licence)) |

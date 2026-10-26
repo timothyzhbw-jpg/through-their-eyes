@@ -1598,11 +1598,11 @@ optgroup {
   .stage:has(.caption-story) .stage-top {
     right: calc(var(--story-w) + var(--card-w) + 2 * var(--gutter));
   }
+  /* The narrower picture brings the run switch and its line over the top-left column (the
+     skeleton's key met it at 1440 px): that column starts below them. */
+
   .stage:has(.caption-story) .stage-card {
     right: calc(var(--story-w) + var(--gutter));
-  }
-  .stage:has(.caption-story) .stage-run {
-    left: calc((100% - var(--story-w)) / 2);
   }
   .stage:has(.caption-story) .stage-caption {
     left: calc((100% - var(--story-w)) / 2);
@@ -1667,6 +1667,30 @@ optgroup {
   }
   .caption-story .caption-more.check {
     transition: none;
+  }
+}
+/* With the story column the picture is narrower. Up to 1760 px the run switch sits under the
+   header, centred in the room left of the card (centred on the picture, its outcome line ran under
+   the card). Wider, the board reaches the top, so the switch stays in the header row just right
+   of the door tabs, and its outcome line wraps before the card. */
+@media (min-width: 1360px) and (max-width: 1760px) {
+  .stage:has(.caption-story):has(.stage-run .seg) .stage-top {
+    top: calc(var(--head-h) + 92px);
+  }
+  .stage:has(.caption-story) .stage-run {
+    top: 84px;
+    left: calc(var(--gutter) + (100% - var(--story-w) - var(--card-w) - 3 * var(--gutter)) / 2);
+  }
+}
+@media (min-width: 1761px) {
+  .stage:has(.caption-story) .stage-run {
+    top: 24px;
+    left: 727px;
+    transform: none;
+  }
+  .stage:has(.caption-story) .stage-run .run-outcome {
+    width: auto;
+    max-width: calc(100vw - 727px - var(--story-w) - var(--card-w) - 2 * var(--gutter) - 8px);
   }
 }
 
