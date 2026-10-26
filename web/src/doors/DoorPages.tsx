@@ -68,30 +68,43 @@ export function YourTurn() {
   const yc = yourCallOf(session);
   const te = takeEyesOf(session);
   const drill = drillOf(session);
-  const cards: { id: string; title: string; line: string; why: string | null; open: () => void }[] =
-    [
-      {
-        id: TURN_CARD_ID.yourCall,
-        title: "Make his call",
-        line: "Decide with only what he knew, then see what really happened.",
-        why: yc.unavailable,
-        open: () => yc.open(),
-      },
-      {
-        id: TURN_CARD_ID.takeEyes,
-        title: "See through his eyes",
-        line: `${TAKE_EYES_SUB}; the sim re-runs the moment.`,
-        why: te.unavailable,
-        open: () => te.open(),
-      },
-      {
-        id: TURN_CARD_ID.drill,
-        title: "Train your scanning",
-        line: `${DRILL_SUB}, then make the pass.`,
-        why: drill.unavailable,
-        open: () => drill.open(),
-      },
-    ];
+  const cards: {
+    id: string;
+    title: string;
+    line: string;
+    image: string;
+    alt: string;
+    why: string | null;
+    open: () => void;
+  }[] = [
+    {
+      id: TURN_CARD_ID.yourCall,
+      title: "Make his call",
+      line: "Decide with only what he knew, then see what really happened.",
+      image: "yourcall.webp",
+      alt: "The elevated view of his decision, with his passing options around him",
+      why: yc.unavailable,
+      open: () => yc.open(),
+    },
+    {
+      id: TURN_CARD_ID.takeEyes,
+      title: "See through his eyes",
+      line: `${TAKE_EYES_SUB}; the sim re-runs the moment.`,
+      image: "eyes.webp",
+      alt: "His first-person view during a look, with the tactical picture in the corner",
+      why: te.unavailable,
+      open: () => te.open(),
+    },
+    {
+      id: TURN_CARD_ID.drill,
+      title: "Train your scanning",
+      line: `${DRILL_SUB}, then make the pass.`,
+      image: "drill.webp",
+      alt: "The scanning drill in first person, with its look grid below the pitch",
+      why: drill.unavailable,
+      open: () => drill.open(),
+    },
+  ];
   return (
     <section className="door-page door-turn" aria-labelledby="turn-title">
       <header className="door-head">
@@ -114,6 +127,14 @@ export function YourTurn() {
                 c.open();
               }}
             >
+              <img
+                className="turn-card-image"
+                src={`${import.meta.env.BASE_URL}img/turn/${c.image}`}
+                alt={c.alt}
+                width="960"
+                height="540"
+                loading="lazy"
+              />
               <span className="turn-card-title">
                 {c.title}
                 <ArrowIcon />
