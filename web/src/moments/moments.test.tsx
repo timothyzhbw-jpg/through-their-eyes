@@ -201,17 +201,17 @@ describe("the hero page's shell (SPEC 7)", () => {
     expect(stage.querySelector(".stage-director, .director-chip, .stat-chip")).toBeNull();
     expect(names(stage.querySelector(".stage-top"), "button, a, select")).toEqual([]);
     expect(stage.querySelectorAll(".stage-run [role=group]")).toHaveLength(1);
-    // The bar: play, the timeline with its two marks, the camera switch; no View options.
+    // The bar: play, speed, the timeline with its two marks, the camera switch; no View options.
     const bar = stage.querySelector(".transport")!;
-    expect(names(bar, ":scope > button")).toEqual(["Play"]);
+    expect(names(bar, ":scope > button")).toEqual(["Play", "Playback speed: 1×"]);
     expect(bar.querySelector('input[aria-label="Timeline"]')).not.toBeNull();
     expect(names(bar.querySelector(".marks"))).toEqual(["Key scan", "Decision"]);
     expect(bar.querySelector('[role=group][aria-label="Camera"]')).not.toBeNull();
     expect(names(bar)).not.toContain("View options");
-    // The card: its title, one line and one button.
+    // The card: its title, one line, one primary action and its close control.
     const card = stage.querySelector(".moment-card")!;
-    expect(names(card)).toHaveLength(1);
-    expect(names(card)[0]).toMatch(/breakdown$/i);
+    expect(names(card)).toEqual(["Hide the moment card", "Play breakdown"]);
+    expect(card.querySelectorAll(".btn-primary")).toHaveLength(1);
     expect(card.querySelectorAll("p.card-body")).toHaveLength(1);
   });
 
