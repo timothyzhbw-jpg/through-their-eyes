@@ -359,7 +359,11 @@ Multi-Agent System (SPEC §0).
   base; richer evidence still needs tackles, crosses and open play that shoots (see the roadmap).
 - **A failure drill lives on one replica's disk.** A restart or redeploy drops it, and
   **Bring back** then answers 404.
-
+- **Team shapes are looser than a Premier League side's.** The hero moments are built to stage
+  one perception problem, and their defending side is not always a compact back line: in the
+  scan hero the back line is spread when the runner gets in behind it. The open-play team shape
+  is fitted to published positional data (SPEC 3.2), but a scripted scenario overrides it where
+  the moment needs a gap.
 
 ## Roadmap: a tactics knowledge base
 

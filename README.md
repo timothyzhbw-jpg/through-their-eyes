@@ -326,6 +326,11 @@ the deployed service. Nothing has been run on real tracking data.
   0 tackles and 0 balls out of play that change possession per 90 minutes over 20 stitched
   matches ([match_stats](eval/reports/match_stats.md)); tackles are switched on in the pressure
   hero's scenario alone.
+- **Team shapes are looser than a Premier League side's.** The hero moments are built to stage
+  one perception problem, and their defending side is not always a compact back line: in the
+  scan hero the back line is spread when the runner gets in behind it. The open-play team shape
+  is fitted to published positional data (SPEC 3.2), but a scripted scenario overrides it where
+  the moment needs a gap.
 - **xT is our own grid**, fitted on synthetic open play, so a gain like "that look was worth … in
   expected threat" is a value inside the simulation.
 
