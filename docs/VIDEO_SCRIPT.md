@@ -214,9 +214,8 @@ The CC0 candidates remain listed in `video/assets.json` and `video/CREDITS.md`.
 
 ## Open
 
-- TODO(Bowen): the music (candidates above) and the story player's placeholder name.
-- TODO(Bowen): the public repository URL on the end card once the repo is public (by 10/26):
-  add a line to `titles.end.params.lines`.
+- Published: the v16 cut, https://youtu.be/1Z14E_X2JXA (1:27), with the original score (`video/score/`, the hybrid
+  variant). Its beats are in `video/trailer.json`; the sections above describe the earlier cuts.
 - The app shots are filmed from the live site after #161 (the offside fix), with the service's
   cached model narration. Its narration no longer says how far off his picture of H9 was, so
   the cards that showed it (`belief_error.err`) now show the pass that found him instead; no
