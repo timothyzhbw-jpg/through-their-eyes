@@ -337,30 +337,6 @@
       "label": "simulation"
     },
     {
-      "beat": "b11-rw1",
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.0,
-        "fit": "pad",
-        "speed": 8.8,
-        "reverse": true
-      },
-      "letterbox": 2.39,
-      "fx": [
-        "rewind",
-        "glue"
-      ],
-      "sfx": [
-        {
-          "name": "touch",
-          "at": 0.0,
-          "gain_db": -3
-        }
-      ],
-      "label": "simulation"
-    },
-    {
       "beat": "b12-bl02a",
       "picture": {
         "src": "clip",
@@ -392,56 +368,6 @@
         {
           "name": "touch",
           "at": 2.32,
-          "gain_db": -4
-        }
-      ],
-      "label": "simulation"
-    },
-    {
-      "beat": "b18-rw2",
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl01_look.mp4",
-        "in": 0.0,
-        "speed": 3.44,
-        "reverse": true,
-        "fit": "pad"
-      },
-      "letterbox": 2.39,
-      "fx": [
-        "rewind",
-        "glue"
-      ],
-      "sfx": [],
-      "label": "simulation"
-    },
-    {
-      "beat": "b19-bl03",
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl03_without.mp4",
-        "in": 0.0,
-        "fit": "pad"
-      },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "back-to-h4",
-          "at": 1.2
-        }
-      ],
-      "sfx": [
-        {
-          "name": "shutter",
-          "at": 1.2,
-          "gain_db": -5
-        },
-        {
-          "name": "touch",
-          "at": 2.0,
           "gain_db": -4
         }
       ],
