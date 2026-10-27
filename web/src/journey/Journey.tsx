@@ -392,7 +392,7 @@ function CompareSummary() {
     ? optionLabel(decision.chosen, personLookup(hero)).replace(/^./, (c) => c.toLowerCase())
     : null;
   const cost = line("look_cost")?.text;
-  const result = chosen ? `With it, ${chosen}${cost ? `; without it, ${cost}` : "."}` : null;
+  const result = chosen ? `With it, ${chosen}.${cost ? ` ${cost}` : ""}` : null;
   if (!look && !result) return null;
   return (
     <div className="journey-compare-summary" lang={language}>
