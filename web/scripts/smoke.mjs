@@ -1100,7 +1100,7 @@ async function drill(page, level) {
     await page.keyboard.up("ArrowRight");
   }
   await see(
-    page.locator(".dr-locked", { hasText: /^Your look: / }),
+    page.locator(".dr-locked", { hasText: /^Your scan: / }),
     "the look snapped to the grid",
   );
   await see(page.getByRole("heading", { name: "Your call" }), "the call at his decision");

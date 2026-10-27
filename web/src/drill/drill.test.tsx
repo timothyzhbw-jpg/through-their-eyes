@@ -150,7 +150,7 @@ describe("Academy drill: the look, the call, the result", () => {
       "Your scan: 0.8 s before the ball, 150° over his right shoulder",
     );
     expect(textOf(el.querySelector(".dr-card .dr-lead"))).toBe(
-      "Your look: 0.8 s before the ball, 150° over his right shoulder.",
+      "Your scan: 0.8 s before the ball, 150° over his right shoulder.",
     );
     expect(el.querySelector(".dr-tick.on")).not.toBeNull();
   });
@@ -198,7 +198,7 @@ describe("Academy drill: the look, the call, the result", () => {
     click(button(el, "Start"));
     run(d, 2.5);
     expect(d.state.get().step).toBe("calling");
-    expect(textOf(el.querySelector(".dr-card .dr-lead"))).toMatch(/^You took no look\./);
+    expect(textOf(el.querySelector(".dr-card .dr-lead"))).toMatch(/^You took no scan\./);
     const runner = [
       ...el.querySelectorAll('[role="group"][aria-label="Options of J. Ferriday"] button'),
     ].find((b) => b.getAttribute("aria-label")!.startsWith("Pass to N. Varnhall"))!;
