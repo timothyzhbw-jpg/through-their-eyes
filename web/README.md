@@ -251,11 +251,11 @@ uv run python -m sim.export --scenario pro_scan --seed 116 --steps web/public/da
   with the held-out numbers (`eval/reports/extra_looks_blind_side_run.md`). Verified lines in en
   and zh: which looks were added, whom he passed to with them, and where each pass reached its
   receiver, with the xT there. `src/without/extra.ts` checks them against the replay and the
-  "Without the look" panel shows them under its "With two more looks" option.
+  "Without the scan" panel shows them under its "With two more scans" option.
 
 - `hero_gates.json`: held-out evidence for the comparison panels, read from the eval reports
   (`eval.hero_gates`, SPEC 3.6, 7; `uv run python -m eval.hero_gates`). `src/without/gates.ts`
-  loads it for "Without the look".
+  loads it for "Without the scan".
 - `look_seed3.json`, `look_press_escape_seed0.json`: Take his eyes (`sim.export.export_looks`,
   SPEC 3.7, 7). Every look of the grid (a time × a direction) re-simulated with that look as his
   only one between the pass and his decision: his head, sight and belief over the window (the

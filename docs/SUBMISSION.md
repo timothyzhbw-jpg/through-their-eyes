@@ -108,7 +108,7 @@ and the full tour.
 
 - **The look** (`?door=look`). The live picture and the moment's story: his scan, the same seconds
   re-simulated without it, the two compared from above, the scan step-through, commentary,
-  evidence and what-ifs. **With two more looks** is the opposite experiment: add one look to his
+  evidence and what-ifs. **With two more scans** is the opposite experiment: add one look to his
   left and one to his right, and his decision changes in <!--num:H10.k-->0<!--/num--> of
   <!--num:H10.n-->40<!--/num--> held-out seeds, the expected result: more looks are not the right look.
 - **Your turn** (`?door=turn`). Three cards open **Make his call**, **See through his eyes** and
