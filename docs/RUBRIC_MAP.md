@@ -10,8 +10,8 @@ less than the claim.
 
 - **Live app:** https://ttesite1ff906.z14.web.core.windows.net (no login). Each deep link opens it
   at a spot; the parameters are in [web/README.md](../web/README.md#url-parameters).
-- **Trailer:** beats and times from [VIDEO_SCRIPT](VIDEO_SCRIPT.md) (the v13 cut, 1:57).
-  TODO(freeze): the published cut's times and URL ([NUMBERS](NUMBERS.md) D6).
+- **Video:** https://youtu.be/1Z14E_X2JXA, the v16 cut (1:27, [NUMBERS](NUMBERS.md) D6), edited by code from
+  [`video/trailer.json`](../video/trailer.json); [VIDEO_SCRIPT](VIDEO_SCRIPT.md) tells the earlier cuts.
 - **Numbers:** each number below is listed in [NUMBERS](NUMBERS.md) with the report or command
   that produces it.
 - **State:** 2026-10-22, `main` at `39aaf27`. The last CI counts recorded: run 39583678095 on
@@ -98,7 +98,7 @@ communicates the project's value, and whether frontend and backend are balanced.
 | Well designed | A control to try a wrong number against the verifier | Evidence card **Try a wrong number** ([web/src/ui/Narration.tsx](../web/src/ui/Narration.tsx), [web/src/tamper/](../web/src/tamper/)) → `POST /api/verify` ([api/tamper.py](../api/tamper.py)): the real Verifier on the claim with the viewer's number, not audited; tests in [tests/test_api.py](../tests/test_api.py) and [web/src/tamper/tamper.test.tsx](../web/src/tamper/tamper.test.tsx). Live: [`?persona=analyst&tamper=cf_value`](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value) | ✅ |
 | Well designed | Accessible and fast on a phone | axe-core WCAG 2.2 A/AA on 13 screens at 1440×900 and 375×812, and in every CI smoke page ([ACCESSIBILITY](ACCESSIBILITY.md)); cold-load timings of the live site on laptop and phone, plain and on Fast 3G ([web_load](../eval/reports/web_load.md)) | ✅; nothing tested with a real screen reader |
 | Well designed | 60 fps on an integrated GPU with the pitch-control shader on | `cd web && npm run build && npm run fps -- --headed`; 60 fps capped on an Apple M4 Pro, headless (SPEC §7, 2026-10-21) | Partial: no run on a PC laptop's integrated GPU with the shader on |
-| The video | The demo video communicates the value | [VIDEO_SCRIPT](VIDEO_SCRIPT.md): a staged story (labelled a dramatisation), then the app in three chapters, the crew, the verifier, the drill, the audiences; numbers only from verified claims; burned-in captions; PRs #170, #171, v14 in #182 | Partial: TODO(Bowen): the public video URL |
+| The video | The demo video communicates the value | [https://youtu.be/1Z14E_X2JXA](https://youtu.be/1Z14E_X2JXA), the v16 cut: a staged story (labelled a dramatisation), the look and the run without it, the scan step-through, the coach's example, tactics in Plain and Pro, the three doors, Your turn, the four studio solutions and Value, the verifier; numbers only from verified claims; burned-in captions; [`video/trailer.json`](../video/trailer.json), #255 | Yes |
 | Balance | Frontend and backend | front: React, three.js and GLSL shaders in [web/](../web/) with its own test suite; back: the simulator, analytics, explain layer, the agent crew and the API in Python ([architecture](../README.md#architecture)); the two meet in typed schemas validated on both sides (`TelestrationPlan`, the claims) | ✅ |
 
 ## 5. Category adherence: Best Multi-Agent System
