@@ -40,6 +40,24 @@ function mount(session: Session): HTMLElement {
   return container;
 }
 
+describe("Playback speed", () => {
+  it("cycles through slow motion and normal speed in the shared playback store", () => {
+    const session = createSession(hero, EXAMPLE_PLAN, payloadJson);
+    const page = mount(session);
+    const button = () => page.querySelector<HTMLButtonElement>(".transport-speed")!;
+
+    expect(button().getAttribute("aria-label")).toBe("Playback speed: 1×");
+    expect(button().textContent).toBe("1×");
+    act(() => button().click());
+    expect(session.playback.get().speed).toBe(0.25);
+    expect(button().getAttribute("aria-label")).toBe("Playback speed: 0.25×");
+    act(() => button().click());
+    expect(session.playback.get().speed).toBe(0.5);
+    act(() => button().click());
+    expect(session.playback.get().speed).toBe(1);
+  });
+});
+
 describe("Space on the picture", () => {
   it("does nothing while the pre-match card is open, and plays once it closes", () => {
     const session = createSession(hero, EXAMPLE_PLAN, payloadJson);

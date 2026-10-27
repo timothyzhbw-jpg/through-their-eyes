@@ -105,7 +105,7 @@ describe("His looks: the coaching story", () => {
     expect(p.opened).toContain("pass:H9"); // seeing his run opens the pass to him
     expect(marked("up")).toContain(`Pass to ${news[0]!.split(":")[0]}`);
     const picture = textOf(el.querySelector(".ss-picture"))!;
-    expect(picture).toContain("His options: without this look → with it");
+    expect(picture).toContain("His options: without this scan → with it");
     expect(picture).toContain(
       "Both are computed at the same frozen frame. ↑ ↓ cross 50%; ↗ ↘ move 20 points or more.",
     );
@@ -141,7 +141,7 @@ describe("His looks: the coaching story", () => {
 
   it("marks the dropped look with a dash in the run without it", async () => {
     const { el } = await opened();
-    click(button(el, "Without the look"));
+    click(button(el, "Without the scan"));
     const tick = el.querySelector(".ss-tick")!;
     expect(textOf(tick)).toBe("–");
     expect(tick.classList.contains("missing")).toBe(true);

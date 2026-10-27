@@ -315,14 +315,23 @@ No login, free, live until 2026-11-10.
 - Model-backed breakdowns are rate-limited per visitor and capped per day. Past that, the
   service serves the cache or the deterministic template, so the demo keeps working.
 - **Code:** https://github.com/timothyzhbw-jpg/through-their-eyes (public, MIT).
-- TODO(Bowen): add the video URL.
+- **Video:** https://youtu.be/1Z14E_X2JXA (1:27, public on YouTube, captions burned in).
 
 ## Team
 
-TODO(Bowen): team members and how each name should appear. Confirm that every member's
-registration went through (SPEC §11, "registered by 2026-10-20 12:00 PT").
-TODO(Bowen): on the Innovation Studio form, select the categories: Grand Prize and Best
-Multi-Agent System (SPEC §0).
+Four people, each owning one area and reviewing the others' work.
+
+| Member | Role |
+|---|---|
+| Jiaan Hu | **Product manager.** Product direction, target users, MVP scope and feature priorities; the project's narrative and demo priorities; the business value (AI tactical broadcast, personalised commentary, automated highlights). |
+| Bowen Zhang | **Website development and visual production.** Builds and maintains the app and its website to the agreed requirements; creates the cinematic sequences that show the concept. |
+| Yiting Shen | **Synthetic data and source review.** Prepares the synthetic match data used by the prototype and the demo; checks the provenance of assets and reference material; keeps demo material clearly apart from real match data. Contributed to AI-powered soccer analytics through feature ideation, counterfactual simulation design, explainability improvements, and product testing. |
+| Jiangyan Yang | **Website feature planning, commentary refinement, football domain review and user testing.** Plans page-level features with the product manager; refines the explanatory commentary so that it states the player's decisions and the tactics plainly; reviews the football and tests the app with users. |
+
+Shared by all four: reviewing the integrated prototype and the demo flow before submission, and
+checking that every claim in the demo is supported by the prototype and its synthetic data. Ideas
+about wider broadcast, streaming and social-media monetisation are exploratory unless the
+submitted product demonstrates them.
 
 ## Limitations
 
@@ -359,7 +368,11 @@ Multi-Agent System (SPEC §0).
   base; richer evidence still needs tackles, crosses and open play that shoots (see the roadmap).
 - **A failure drill lives on one replica's disk.** A restart or redeploy drops it, and
   **Bring back** then answers 404.
-
+- **Team shapes are looser than a Premier League side's.** The hero moments are built to stage
+  one perception problem, and their defending side is not always a compact back line: in the
+  scan hero the back line is spread when the runner gets in behind it. The open-play team shape
+  is fitted to published positional data (SPEC 3.2), but a scripted scenario overrides it where
+  the moment needs a gap.
 
 ## Roadmap: a tactics knowledge base
 

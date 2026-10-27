@@ -116,7 +116,7 @@ describe("the landing page", () => {
     expect(page.querySelector('section.stage[aria-label="Live screen"]')).toBeNull();
     const home = page.querySelector("section.door-home")!;
     expect(textOf(home.querySelector("h2#home-title"))).toBe(
-      "One look over his shoulder changed his pass.",
+      "One scan over his shoulder changed his pass.",
     );
     const primary = home.querySelectorAll(".btn-primary");
     expect(primary).toHaveLength(1);
@@ -136,7 +136,7 @@ describe("the landing page", () => {
     expect(linksIn(page, "look")).toEqual([
       ["The story", "/?tour=quick"],
       ["Step through his looks", "/?play=steps"],
-      ["With two more looks", "/?compare=extra"],
+      ["With two more scans", "/?compare=extra"],
     ]);
     expect(linksIn(page, "turn")).toEqual([
       ["Make his call", "/?play=yourcall"],
@@ -277,7 +277,7 @@ describe("its links", () => {
   it("open the look's compare on the run with two more looks", () => {
     const session = withExtra();
     const page = mount(session);
-    click(link(page, "With two more looks"));
+    click(link(page, "With two more scans"));
     expect(doors.get().door).toBe("look");
     expect(extraLooksOf(session).compare.get().value).toBe("extra");
   });

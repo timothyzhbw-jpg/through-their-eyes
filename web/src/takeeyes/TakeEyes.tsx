@@ -11,6 +11,7 @@
 
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
@@ -22,7 +23,8 @@ import { shortName } from "../data/roster";
 import type { Vec2 } from "../data/types";
 import type { Narration } from "../narration/payload";
 import { toPitch, toScreen } from "../options/passOptions";
-import { SessionContext, useBreakdown, useSession } from "../session";
+import { SessionContext, useBreakdown, useSession, type ViewSession } from "../session";
+import type { PlaybackState, PlaybackStore } from "../store/playback";
 import { useStore } from "../store/store";
 import { isVerified, KindTags, LineText, lineClaims } from "../ui/Narration";
 import { Segmented } from "../ui/Segmented";
@@ -143,6 +145,32 @@ export function TakeEyesStage({ scene = true }: { scene?: boolean }) {
 
 // ---------- the views: the board with the dial, his eyes, the timeline ----------
 
+function selectedPlayback(playback: PlaybackStore): PlaybackStore {
+  let source: PlaybackState | null = null;
+  let selected: PlaybackState | null = null;
+  return {
+    get() {
+      const s = playback.get();
+      if (s !== source) {
+        source = s;
+        selected = { ...s, mode: "counterfactual", whatIf: null };
+      }
+      return selected!;
+    },
+    set: playback.set,
+    subscribe: playback.subscribe,
+  };
+}
+
+function SelectedPov({ stage }: { stage: ViewSession }) {
+  const playback = useMemo(() => selectedPlayback(stage.playback), [stage]);
+  return (
+    <SessionContext.Provider value={{ ...stage, playback }}>
+      <PovView />
+    </SessionContext.Provider>
+  );
+}
+
 function EyesView({ te, scene }: { te: TakeEyes; scene: boolean }) {
   const looks = te.looks()!;
   const s = useStore(te.state, (x) => x);
@@ -152,12 +180,12 @@ function EyesView({ te, scene }: { te: TakeEyes; scene: boolean }) {
   const board = s.step !== "looking"; // the board is the main view, but while he looks
   const hero = te.session.hero;
   return (
-    <figure className={`te-view step-${s.step}`} aria-label="The moment, with your look">
+    <figure className={`te-view step-${s.step}`} aria-label="The moment, with your scan">
       <div className="te-stage">
         {scene && stage && (
-          <SessionContext.Provider value={stage}>
+          <SessionContext.Provider key={te.shown()?.id ?? "none"} value={stage}>
             <div className={board ? "te-slot pip" : "te-slot main"}>
-              <PovView />
+              <SelectedPov stage={stage} />
             </div>
             <div className={board ? "te-slot main" : "te-slot pip"}>
               <TacticalView />
@@ -178,9 +206,9 @@ function EyesView({ te, scene }: { te: TakeEyes; scene: boolean }) {
 
 function viewTag(step: string, view: ResultView): string {
   if (step === "choosing") return "Where will he look?";
-  if (step === "looking") return "Through his eyes, with your look";
-  if (view === "both") return "Gold: your look's run · his real run";
-  return view === "picture" ? "His picture with your look" : "His picture with no look";
+  if (step === "looking") return "Through his eyes, with your scan";
+  if (view === "both") return "Gold: your scan's run · his real run";
+  return view === "picture" ? "His picture with your scan" : "His picture with no scan";
 }
 
 /** The dial over the hero on the board: the cone where he will look, a handle per direction of the
@@ -487,11 +515,11 @@ function Card({ te }: { te: TakeEyes }) {
   return (
     <aside className="te-card" aria-labelledby="te-title">
       <h2 id="te-title" ref={heading} tabIndex={-1}>
-        {same ? "Same call as his" : "Your look changes his call"}
+        {same ? "Same call as his" : "Your scan changes his call"}
       </h2>
       <dl className="te-versus">
         <div className="yours">
-          <dt>With your look</dt>
+          <dt>With your scan</dt>
           <dd>{callLabel(entry.decision.chosen)}</dd>
         </div>
         <div>
@@ -499,7 +527,7 @@ function Card({ te }: { te: TakeEyes }) {
           <dd>{callLabel(looks.factual.chosen)}</dd>
         </div>
         <div>
-          <dt>With no look</dt>
+          <dt>With no scan</dt>
           <dd>{callLabel(looks.noLook.decision.chosen)}</dd>
         </div>
       </dl>
@@ -511,7 +539,7 @@ function Card({ te }: { te: TakeEyes }) {
         options={[
           { value: "both", label: "Both runs" },
           { value: "picture", label: "His picture" },
-          { value: "none", label: "No look" },
+          { value: "none", label: "No scan" },
         ]}
       />
       <div className="te-actions">

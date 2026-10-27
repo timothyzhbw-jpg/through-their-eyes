@@ -38,7 +38,7 @@ export function passMoves(
         ...other,
         grid,
         toXt: claim.cfXt,
-        label: "Without the look",
+        label: "Without the scan",
       }),
     );
   }

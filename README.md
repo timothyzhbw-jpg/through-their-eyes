@@ -17,6 +17,8 @@ match recap, the Tactics lab, five audiences, and English and Chinese.
 
 ### [▶ Try the live app](https://ttesite1ff906.z14.web.core.windows.net) · free, no login, a synthetic match with fictional players
 
+**[▶ Watch the video](https://youtu.be/1Z14E_X2JXA)** (1:27, captions burned in)
+
 [![The live app in first person, through the eyes of J. Ferriday, the midfielder, during his look over the shoulder. The KEY SCAN tag is lit; the runner N. Varnhall, marked in gold by the goal on the right, is in his sight; the verified caption reads "J. Ferriday scanned once in the 2 seconds before receiving."](docs/hero-key-scan.jpg)](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0)
 
 <sub>The live app through the eyes of J. Ferriday, the midfielder, as he looks over his shoulder,
@@ -326,6 +328,11 @@ the deployed service. Nothing has been run on real tracking data.
   0 tackles and 0 balls out of play that change possession per 90 minutes over 20 stitched
   matches ([match_stats](eval/reports/match_stats.md)); tackles are switched on in the pressure
   hero's scenario alone.
+- **Team shapes are looser than a Premier League side's.** The hero moments are built to stage
+  one perception problem, and their defending side is not always a compact back line: in the
+  scan hero the back line is spread when the runner gets in behind it. The open-play team shape
+  is fitted to published positional data (SPEC 3.2), but a scripted scenario overrides it where
+  the moment needs a gap.
 - **xT is our own grid**, fitted on synthetic open play, so a gain like "that look was worth … in
   expected threat" is a value inside the simulation.
 
@@ -522,6 +529,22 @@ Built with Claude Code.
 [infra/deploy.sh](infra/deploy.sh) creates the hosting resources (`provision`), rolls out the API
 (`api`), uploads the web app (`web`) and sets the deploy workflow's variables (`github`). It only
 accepts an explicitly named Azure for Students, pay-as-you-go or free-trial subscription.
+
+## Team
+
+Four people, each owning one area and reviewing the others' work.
+
+| Member | Role |
+|---|---|
+| Jiaan Hu | **Product manager.** Product direction, target users, MVP scope and feature priorities; the project's narrative and demo priorities; the business value (AI tactical broadcast, personalised commentary, automated highlights). |
+| Bowen Zhang | **Website development and visual production.** Builds and maintains the app and its website to the agreed requirements; creates the cinematic sequences that show the concept. |
+| Yiting Shen | **Synthetic data and source review.** Prepares the synthetic match data used by the prototype and the demo; checks the provenance of assets and reference material; keeps demo material clearly apart from real match data. Contributed to AI-powered soccer analytics through feature ideation, counterfactual simulation design, explainability improvements, and product testing. |
+| Jiangyan Yang | **Website feature planning, commentary refinement, football domain review and user testing.** Plans page-level features with the product manager; refines the explanatory commentary so that it states the player's decisions and the tactics plainly; reviews the football and tests the app with users. |
+
+Shared by all four: reviewing the integrated prototype and the demo flow before submission, and
+checking that every claim in the demo is supported by the prototype and its synthetic data. Ideas
+about wider broadcast, streaming and social-media monetisation are exploratory unless the
+submitted product demonstrates them.
 
 ## Credits
 - Rigged players: converted from Gameplay Football by Bastiaan Konings Schuiling, as shipped in

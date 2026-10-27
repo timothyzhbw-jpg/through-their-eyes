@@ -236,9 +236,9 @@ function CardView({ card, onWatch }: { card: LabCard; onWatch: (frame: number) =
           className="btn"
           href={compareHref(card.id)}
           data-link="compare"
-          title="The moment with the look, then without it (the With / Without toggle)"
+          title="The moment with the scan, then without it (the With / Without toggle)"
         >
-          With / without the look
+          With / without the scan
         </a>
         {card.watch && (
           <button type="button" className="btn" onClick={() => onWatch(card.watch!.frame)}>

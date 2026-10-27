@@ -214,7 +214,7 @@ describe("the Tactics lab panel", () => {
     expect(html).toContain(
       'href="/?match=press_escape-0&amp;intro=0&amp;run=counterfactual&amp;at=decision"',
     );
-    expect(html).toContain("With / without the look");
+    expect(html).toContain("With / without the scan");
   });
 
   it("draws the pass lanes at his decision, open and blocked told by dash and cross", () => {

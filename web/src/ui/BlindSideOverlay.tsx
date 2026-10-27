@@ -2,7 +2,7 @@
 // player's own alerts. A live deterministic overlay: marked `sim`, not a verified claim.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { alertsAt, unseenLabel } from "../alerts/blindSide";
+import { ALERT_COLOR, alertsAt, unseenLabel } from "../alerts/blindSide";
 import { useView } from "../session";
 import { useStore } from "../store/store";
 import { boardZoom } from "../views/scene";
@@ -11,6 +11,26 @@ import { toScreen } from "../options/passOptions";
 import { shortName } from "../data/roster";
 import { SourceChip } from "../provenance/SourceChip";
 import { computed } from "../provenance/source";
+
+export function StageBlindSideKey() {
+  const { hero, playback } = useView();
+  const frame = useStore(playback, (s) => s.frame);
+  const mode = useStore(playback, (s) => s.mode);
+  const on = useStore(playback, (s) => s.blindSide);
+  const camera = useStore(playback, (s) => s.camera);
+  const focus = useStore(playback, (s) => s.focus);
+  const lines =
+    on &&
+    (camera === "broadcast" || focus === "tactical") &&
+    alertsAt(hero, hero.runs[mode], frame).length > 0;
+  if (!lines) return null;
+  return (
+    <p className="blind-side-key">
+      <i style={{ background: ALERT_COLOR }} aria-hidden="true" />
+      Blind side: an opponent closing in that he has not seen
+    </p>
+  );
+}
 
 export function BlindSideOverlay() {
   const { hero, playback } = useView();

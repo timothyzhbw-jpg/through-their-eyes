@@ -93,7 +93,7 @@ describe("on the live screen", () => {
     const page = mount(session, <WithoutLookNote />);
     expect(page.textContent).toBe("");
     act(() => session.controls.setMode("counterfactual"));
-    const note = page.querySelector("[aria-label='The run without the look']")!;
+    const note = page.querySelector("[aria-label='The run without the scan']")!;
     expect(text(note)).toContain(
       "Removed: J. Ferriday's look over his right shoulder, 0.8 seconds before the ball reached him.",
     );
@@ -101,7 +101,7 @@ describe("on the live screen", () => {
       "Without that look, J. Ferriday would have played it back to K. Annersley instead of forward to N. Varnhall.",
     );
     act(() => session.breakdown.set({ language: "zh" }));
-    expect(text(page.querySelector("[aria-label='The run without the look']"))).toContain(
+    expect(text(page.querySelector("[aria-label='The run without the scan']"))).toContain(
       "拿掉的，是球到之前0.8秒、费里迪扭头看向右后方的那一眼。",
     );
   });
@@ -111,10 +111,10 @@ describe("on the live screen", () => {
     act(() => session.controls.setMode("counterfactual"));
     act(() => session.controls.seek(56));
     const bar = mount(session, <Transport />);
-    const mark = [...bar.querySelectorAll("button")].find((b) => text(b) === "Removed look");
+    const mark = [...bar.querySelectorAll("button")].find((b) => text(b) === "Removed scan");
     expect(mark).toBeDefined();
     const hud = mount(session, <Hud />);
-    expect(text(hud)).toContain("removed look");
+    expect(text(hud)).toContain("removed scan");
     act(() => session.controls.setMode("factual"));
     expect([...bar.querySelectorAll("button")].some((b) => text(b) === "Key scan")).toBe(true);
   });
@@ -128,7 +128,7 @@ describe("on the live screen", () => {
     act(() => session.controls.seek(56));
     const edge = page.querySelector(".removed-edge")!;
     expect(edge.classList.contains("right")).toBe(true);
-    expect(text(edge)).toBe("Removed look");
+    expect(text(edge)).toBe("Removed scan");
     act(() => session.controls.seek(71));
     expect(page.querySelector(".removed-edge")).toBeNull();
     act(() => session.controls.seek(56));

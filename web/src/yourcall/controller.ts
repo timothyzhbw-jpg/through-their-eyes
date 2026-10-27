@@ -5,7 +5,8 @@
 // the replay there. It opens at any decision; an option without a re-simulated run says so
 // (assessment.ts).
 
-import type { Session } from "../session";
+import type { Session, ViewSession } from "../session";
+import { createPlayback, type PlaybackStore } from "../store/playback";
 import { createStore, type Store } from "../store/store";
 import { CLOSED, reduce, type FlowEvent, type FlowState } from "./flow";
 import { callOptions, clipOf, type CallOption, type Clip } from "./options";
@@ -31,6 +32,8 @@ export interface YourCallState extends FlowState {
 export interface YourCall {
   session: Session;
   state: Store<YourCallState>;
+  playback: PlaybackStore;
+  stage(): ViewSession;
   options: CallOption[];
   picture: Picture | null;
   unavailable: string | null; // why the mode cannot open; null when it can
@@ -70,7 +73,30 @@ function create(session: Session): YourCall {
   const decision = hero.runs.factual.decision;
   const unavailable = picture && decision?.options.length ? null : NO_DECISION;
   const state = createStore<YourCallState>(INITIAL);
+  const pov = createPlayback(hero);
+  pov.set({
+    frame: moment.decisionFrame,
+    povPlayer: hero.heroId ?? hero.ids[hero.hero],
+    playing: false,
+    options: false,
+    blindSide: false,
+    beliefGhosts: false,
+    cone: false,
+    cfGhost: false,
+    whatIf: null,
+    camera: "pov",
+  });
+  const stage: ViewSession = { ...session, playback: pov };
   const ctx = { actions: options.map((o) => o.action) };
+
+  const stagePlayback = () => {
+    const s = state.get();
+    const clip =
+      s.clip && (s.step === "actual" || s.step === "compare" || s.clip.of === his?.action)
+        ? s.clip
+        : null;
+    pov.set({ frame: clip?.frame ?? moment.decisionFrame, playing: false });
+  };
 
   const clipFor = (action: string, reduced: boolean): ClipState | null => {
     const option = options.find((o) => o.action === action);
@@ -105,11 +131,14 @@ function create(session: Session): YourCall {
       }
     }
     state.set(next);
+    stagePlayback();
   };
 
   return {
     session,
     state,
+    playback: pov,
+    stage: () => stage,
     options,
     picture,
     unavailable,
@@ -153,6 +182,7 @@ function create(session: Session): YourCall {
       if (s.step === "truth" && s.morph < 1) {
         state.set({ morph: Math.min(1, s.morph + dt / MORPH_S) });
       }
+      stagePlayback();
     },
   };
 }

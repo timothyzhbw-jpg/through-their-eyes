@@ -40,9 +40,7 @@
         {
           "do": "wait",
           "for": "assets",
-          "views": [
-            "pov"
-          ],
+          "views": ["pov"],
           "timeout_s": 40
         },
         {
@@ -110,7 +108,7 @@
           "do": "click",
           "within": ".stage-run",
           "role": "button",
-          "name": "Without the look",
+          "name": "Without the scan",
           "exact": true,
           "hold": 2.2,
           "still": true
@@ -119,7 +117,7 @@
           "do": "click",
           "within": ".stage-run",
           "role": "button",
-          "name": "With the look",
+          "name": "With the scan",
           "exact": true,
           "hold": 1.4
         },
@@ -127,7 +125,7 @@
           "do": "click",
           "within": ".stage-run",
           "role": "button",
-          "name": "Without the look",
+          "name": "Without the scan",
           "exact": true,
           "hold": 1.6
         }
@@ -266,10 +264,7 @@
         {
           "do": "click",
           "role": "button",
-          "name": [
-            "Pass to H4",
-            "Pass to K. Annersley"
-          ],
+          "name": ["Pass to H4", "Pass to K. Annersley"],
           "exact": false,
           "hold": 3.5
         },

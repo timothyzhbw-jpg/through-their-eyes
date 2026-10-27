@@ -158,7 +158,7 @@ function LookDoor() {
           {
             key: "extra",
             href: HOME_LINKS.extra,
-            label: "With two more looks",
+            label: "With two more scans",
             open: () => {
               extra.compare.set({ value: "extra" });
               openDoor("look", { address: true });
@@ -236,7 +236,7 @@ function Evidence() {
           <b>
             {gate.changed}/{gate.n}
           </b>{" "}
-          held-out seeds: without the look he{" "}
+          held-out seeds: without the scan he{" "}
           {gate.what === "decision" ? "decides" : "places the shot"} differently.{" "}
           <SourceChip kind="sim" title={`Eval result from ${gate.report}`} spoken />
         </span>

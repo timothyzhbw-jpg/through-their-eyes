@@ -70,7 +70,7 @@ describe("the drill's result", () => {
       "1.2 s before the ball, 150° over his right shoulder",
     );
     expect(lookWords(looks, at(70, 90), hero.dt)).toBe("as the ball arrived, 90° to his left");
-    expect(lookWords(looks, looks.noLook, hero.dt)).toBe("No look");
+    expect(lookWords(looks, looks.noLook, hero.dt)).toBe("No scan");
     expect(
       drillResult({ hero, looks, entry: at(70, 90), pick: "carry", language: "en" }).late,
     ).toBe(true);

@@ -1371,6 +1371,7 @@ optgroup {
 }
 /* lighter than the other cards: a thin veil, no outline, the picture shows through */
 .moment-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1386,6 +1387,18 @@ optgroup {
 }
 .moment-card .card-actions {
   margin-top: 4px;
+}
+/* Above the card's heading, which is positioned and drawn later (it took the click). */
+.moment-card .moment-close {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  right: 8px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  color: var(--chalk);
+  font: 400 24px/1 var(--font-body);
 }
 .card-head {
   display: flex;
@@ -1407,6 +1420,7 @@ optgroup {
 }
 .moment-card h2 {
   margin: 0;
+  padding-right: 32px;
   font: 400 28px/1.06 var(--font-display);
   letter-spacing: -0.02em;
   text-wrap: balance;
@@ -1584,11 +1598,11 @@ optgroup {
   .stage:has(.caption-story) .stage-top {
     right: calc(var(--story-w) + var(--card-w) + 2 * var(--gutter));
   }
+  /* The narrower picture brings the run switch and its line over the top-left column (the
+     skeleton's key met it at 1440 px): that column starts below them. */
+
   .stage:has(.caption-story) .stage-card {
     right: calc(var(--story-w) + var(--gutter));
-  }
-  .stage:has(.caption-story) .stage-run {
-    left: calc((100% - var(--story-w)) / 2);
   }
   .stage:has(.caption-story) .stage-caption {
     left: calc((100% - var(--story-w)) / 2);
@@ -1655,6 +1669,30 @@ optgroup {
     transition: none;
   }
 }
+/* With the story column the picture is narrower. Up to 1760 px the run switch sits under the
+   header, centred in the room left of the card (centred on the picture, its outcome line ran under
+   the card). Wider, the board reaches the top, so the switch stays in the header row just right
+   of the door tabs, and its outcome line wraps before the card. */
+@media (min-width: 1360px) and (max-width: 1760px) {
+  .stage:has(.caption-story):has(.stage-run .seg) .stage-top {
+    top: calc(var(--head-h) + 92px);
+  }
+  .stage:has(.caption-story) .stage-run {
+    top: 84px;
+    left: calc(var(--gutter) + (100% - var(--story-w) - var(--card-w) - 3 * var(--gutter)) / 2);
+  }
+}
+@media (min-width: 1761px) {
+  .stage:has(.caption-story) .stage-run {
+    top: 24px;
+    left: 727px;
+    transform: none;
+  }
+  .stage:has(.caption-story) .stage-run .run-outcome {
+    width: auto;
+    max-width: calc(100vw - 727px - var(--story-w) - var(--card-w) - 2 * var(--gutter) - 8px);
+  }
+}
 
 /* ---------- the playback bar ---------- */
 .transport {
@@ -1678,6 +1716,20 @@ optgroup {
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.14);
 }
 .play:hover {
+  background: #fff;
+}
+.transport-speed {
+  flex: none;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: var(--r-control);
+  background: var(--chalk);
+  color: var(--ink);
+  font: 600 13px/1 var(--font-data);
+  white-space: nowrap;
+}
+.transport-speed:hover {
   background: #fff;
 }
 /* the time and frame: only while the timeline is hovered or focused (it keeps its place, so the
@@ -1844,7 +1896,7 @@ optgroup {
     order: -2;
   }
   .transport:has(.play) .timeline {
-    flex-basis: calc(100% - 64px);
+    flex-basis: calc(100% - 116px);
   }
 }
 
@@ -3248,6 +3300,30 @@ optgroup {
   color: var(--chalk-2);
   pointer-events: none;
 }
+.blind-side-key {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 380px;
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: var(--r-tag);
+  background: rgba(8, 14, 11, 0.85);
+  color: var(--chalk);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+.blind-side-key i {
+  flex: none;
+  width: 24px;
+  height: 2px;
+  margin-top: 7px;
+  background: var(--alert);
+}
+.focus-tactical .blind-side-key {
+  grid-column: 1 / -1;
+}
 .blind-tag {
   position: absolute;
   transform: translate(-50%, 14px);
@@ -3691,6 +3767,10 @@ optgroup {
   }
   .transport .play {
     width: 44px;
+    height: 44px;
+  }
+  .transport-speed {
+    min-width: 44px;
     height: 44px;
   }
   .transport .timeline,

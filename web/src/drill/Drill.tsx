@@ -162,7 +162,7 @@ function DrillView(props: {
         )}
         {result && (
           <p className="dr-tag" aria-hidden="true">
-            Gold: {locked?.cell ? "your look's" : "no look's"} run · his real run
+            Gold: {locked?.cell ? "your scan's" : "no scan's"} run · his real run
           </p>
         )}
       </div>
@@ -236,8 +236,8 @@ function Overlay({ d }: { d: Drill }) {
       {locked && looks && (
         <p className="dr-locked" aria-hidden="true">
           {locked.cell
-            ? `Your look: ${lookWords(looks, locked.entry, d.session.hero.dt)}`
-            : "No look"}
+            ? `Your scan: ${lookWords(looks, locked.entry, d.session.hero.dt)}`
+            : "No scan"}
         </p>
       )}
       <HeadDial d={d} />
@@ -443,12 +443,12 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
         <p className="dr-lead" aria-live="polite">
           {s.locked
             ? s.locked.cell
-              ? `Your look: ${lookWords(looks, s.locked.entry, hero.dt)}.`
+              ? `Your scan: ${lookWords(looks, s.locked.entry, hero.dt)}.`
               : s.locked.tooSmall
-                ? `Too small for a look: a scan turns at least ${SCAN_MIN_DEG}° from the ball. No look.`
-                : "No look before the ball arrived."
+                ? `Too small for a scan: a scan turns at least ${SCAN_MIN_DEG}° from the ball. No scan.`
+                : "No scan before the ball arrived."
             : s.small
-              ? `Too small for a look: turn at least ${SCAN_MIN_DEG}° from the ball.`
+              ? `Too small for a scan: turn at least ${SCAN_MIN_DEG}° from the ball.`
               : turned
                 ? "Turning… let go to end your look."
                 : "Drag the picture sideways, or hold ← or →."}
@@ -477,8 +477,8 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
         </h2>
         <p className="dr-lead">
           {locked.cell
-            ? `Your look: ${lookWords(looks, locked.entry, hero.dt)}.`
-            : "You took no look."}{" "}
+            ? `Your scan: ${lookWords(looks, locked.entry, hero.dt)}.`
+            : "You took no scan."}{" "}
           This is his picture with it: everyone stands where he pictured them, and the players he
           had not seen lately are grey.
         </p>
@@ -502,9 +502,9 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
   const yc = d.call();
   const next = nextLevel(level);
   const timing = !locked.cell
-    ? { ok: false, text: "No look before the ball arrived" }
+    ? { ok: false, text: "No scan before the ball arrived" }
     : r.late
-      ? { ok: false, text: "Your look came as the ball arrived" }
+      ? { ok: false, text: "Your scan came as the ball arrived" }
       : { ok: true, text: "You looked before the ball arrived" };
   return (
     <aside className="dr-card" aria-labelledby="dr-title">
@@ -532,7 +532,7 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
       </ul>
       <dl className="dr-you">
         <div>
-          <dt>Your look</dt>
+          <dt>Your scan</dt>
           <dd>{r.look}</dd>
         </div>
         {r.saw && r.narration ? (
@@ -558,7 +558,7 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
           </dd>
         </div>
       </dl>
-      <h3 className="dr-sub">Your look in the sim: he chooses with it</h3>
+      <h3 className="dr-sub">Your scan in the sim: he chooses with it</h3>
       {r.narration && r.lines.length > 0 && (
         <ul className="dr-lines" aria-label="Verified lines">
           {r.lines.map((l) => (
@@ -570,7 +570,7 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
       )}
       <dl className="dr-versus" aria-label="Compared">
         <div className="yours">
-          <dt>With your look</dt>
+          <dt>With your scan</dt>
           <dd>{callLabel(r.simCall)}</dd>
         </div>
         <div>
@@ -583,7 +583,7 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
           )}
         </div>
         <div>
-          <dt>With no look</dt>
+          <dt>With no scan</dt>
           <dd>{callLabel(r.noLookCall)}</dd>
         </div>
       </dl>

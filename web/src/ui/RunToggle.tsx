@@ -59,7 +59,7 @@ export function RunToggle() {
       {line && !locked && (
         <p className="run-outcome" data-testid="run-outcome">
           <span className="with">
-            <b>With the look</b> → {line.withLook}
+            <b>With the scan</b> → {line.withLook}
           </span>
           <span className="sep" aria-hidden="true">
             {" · "}

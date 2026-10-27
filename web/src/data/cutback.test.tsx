@@ -48,7 +48,7 @@ describe("a scan hero other than the blind-side run", () => {
   });
 
   it("has its own headline, blurb and label", () => {
-    expect(momentTitle(hero)).toEqual(["One look changed his", "pass."]);
+    expect(momentTitle(hero)).toEqual(["One scan changed his", "pass."]);
     expect(blurbOf(hero)).toMatch(/box/);
     expect(blurbOf(hero)).not.toMatch(/A hero moment:/);
     expect(scenarioLabel("cutback_scan")).toBe("The cutback");

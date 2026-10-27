@@ -42,7 +42,7 @@ export interface TakeEyes {
   playback: PlaybackStore; // the stage's own playback
   unavailable: string | null; // why the mode cannot open; null when it can
   looks(): Looks | null;
-  /** The look the stage shows: the chosen cell while choosing is previewed with no look. */
+  /** The look the stage shows; the no-look run only when chosen or no cell is available. */
   shown(): LookEntry | null;
   /** The chosen cell's look; null while none is chosen or it cannot start. */
   chosen(): LookEntry | null;
@@ -122,8 +122,8 @@ function create(session: Session, fetchImpl: Fetch, dataUrl: string): TakeEyes {
   const shown = (): LookEntry | null => {
     if (!looks) return null;
     const s = state.get();
-    if (s.step === "looking" || (s.step === "result" && s.view !== "none")) return entryAt(s);
-    return looks.noLook;
+    if (s.step === "result" && s.view === "none") return looks.noLook;
+    return entryAt(s) ?? looks.noLook;
   };
 
   /** The derived session for one look: the hero with the look's run as "counterfactual". */
@@ -289,7 +289,7 @@ export function lookSession(
         run: entry.after,
         answers: {},
         errors: [],
-        tag: `${entry.look ? "your look" : "no look"}: ${lowerFirst(callLabel(entry.decision.chosen))}`,
+        tag: `${entry.look ? "your scan" : "no scan"}: ${lowerFirst(callLabel(entry.decision.chosen))}`,
       },
     ],
   };

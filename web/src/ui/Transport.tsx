@@ -12,7 +12,7 @@ import { useView } from "../session";
 import { useStore } from "../store/store";
 import { PauseIcon, PlayIcon } from "./icons";
 import { intro } from "./intro";
-import { CameraSwitch } from "./Stage";
+import { CameraSwitch, MATCH_SPEEDS, SPEEDS } from "./Stage";
 
 // Possession numbers on the match timeline are drawn only this far apart (px; a 9 px two-digit
 // number and its 4 px offset): a hero possession is about 6 s, and on a phone the whole match
@@ -35,6 +35,8 @@ export function Transport() {
   const { hero, playback, controls } = session;
   const playing = useStore(playback, (s) => s.playing);
   const frame = useStore(playback, (s) => s.frame);
+  const speed = useStore(playback, (s) => s.speed);
+  const speeds = hero.match ? MATCH_SPEEDS : SPEEDS;
   const offset = session.kind === "hero" ? session.offset : 0;
 
   useEffect(() => {
@@ -59,6 +61,15 @@ export function Transport() {
         onClick={controls.togglePlay}
       >
         {playing ? <PauseIcon /> : <PlayIcon />}
+      </button>
+      <button
+        type="button"
+        className="transport-speed"
+        aria-label={`Playback speed: ${speed}×`}
+        title="Change playback speed"
+        onClick={() => controls.setSpeed(speeds[(speeds.indexOf(speed) + 1) % speeds.length])}
+      >
+        {speed}×
       </button>
       <Timeline />
       <div className="clock" title={offset ? "Match clock" : undefined}>
@@ -247,7 +258,7 @@ function Timeline() {
               strokeWidth={1.5}
               strokeDasharray="3 3"
             >
-              <title>Removed look</title>
+              <title>Removed scan</title>
             </rect>
           )}
           {marked && (
@@ -317,11 +328,11 @@ function Timeline() {
               onClick={() => controls.seek(Math.max(0, key.start - 8))}
               title={
                 removed
-                  ? "Jump to just before the look this run leaves out"
+                  ? "Jump to just before the scan this run leaves out"
                   : "Jump to just before the key scan"
               }
             >
-              {removed ? "Removed look" : "Key scan"}
+              {removed ? "Removed scan" : "Key scan"}
             </button>
           )}
           <button
