@@ -21,6 +21,15 @@ match recap, the Tactics lab, five audiences, and English and Chinese.
 
 **[▶ Watch the video](https://youtu.be/q2_qIRchqYs)** (1:37, captions burned in)
 
+**Who pays, and what a moment costs.** Broadcasters, for a "through his eyes" studio segment whose
+overlays arrive as timecoded cues for their graphics engine; clubs and academies, to review and
+train scanning on their own tracking; the league's fan apps, for explainers in their fans'
+languages (we ship English and Chinese) and audio description for blind and low-vision fans.
+One explained moment in four scripts costs about <!--num:MA6-->$0.0090<!--/num--> in model calls, and a re-watch
+costs no model call (breakdowns are cached), so a licence is priced by the tracking feed and
+editorial review, not by the model. These are hypotheses: no customer has seen it yet
+([business model](docs/SUBMISSION.md#business-model), [who uses it](#who-uses-it)).
+
 **Category: Best Multi-Agent System.** The crew in 30 seconds ([full answer](#best-multi-agent-system), each judging criterion in [RUBRIC_MAP](docs/RUBRIC_MAP.md)):
 - Four model agents on Microsoft Agent Framework (Director; Analyst, calling our MCP tool server; Telestrator; narration in two voices) and two code steps (Verifier, Voice), joined by typed handoffs, a rewrite loop and checkpoints.
 - Models choose verified claim IDs; code fills in every number, and the Verifier vetoes any line it refutes.
@@ -54,7 +63,8 @@ and a whole stitched match.
 
 ## From event to value
 The site opens on a [landing page](https://ttesite1ff906.z14.web.core.windows.net/?door=home):
-the promise, one **Watch the look (60 s)**, the three doors in a few lines each with every feature
+the promise and one **Watch the look (60 s)** beside a short muted loop recorded from the live app
+at the key scan (it opens the same story), the three doors in a few lines each with every feature
 one link away, and the evidence in one line. The brand in the header comes back to it. The three
 doors are always in the header beside one **⋯ Settings** menu (the moment, the audience and
 language, who to follow, sound, view options and the full tour).

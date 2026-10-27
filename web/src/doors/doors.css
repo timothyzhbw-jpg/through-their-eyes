@@ -178,8 +178,65 @@
   margin: 56px 0 0;
 }
 
-/* The landing page (Landing.tsx): the promise and one button, the three doors as three short
-   columns of links, the evidence in one line. Calm: no picture, no motion but the reveal. */
+/* The landing page (Landing.tsx): the promise and one button beside the product (a muted loop of
+   the live app), the three doors as three short columns of links, the evidence in one line. */
+.home-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 56px;
+  align-items: center;
+}
+.home-hero .door-head h2 {
+  font-size: clamp(44px, 4.4vw, 76px);
+}
+.home-shot {
+  margin: 0;
+  min-width: 0;
+}
+.home-shot-link {
+  position: relative;
+  display: block;
+  border-radius: var(--r-media);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px var(--hairline-strong),
+    0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.home-shot-link:focus-visible {
+  outline: 2px solid var(--floodlight);
+  outline-offset: 3px;
+}
+.home-shot-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1152 / 748;
+  object-fit: cover;
+  background: #0b0d0c;
+}
+.home-shot-tag {
+  position: absolute;
+  top: 14px;
+  right: 14px; /* the sky: clear of the app's own caption and timeline at the bottom */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(10, 12, 11, 0.78);
+  color: var(--chalk);
+  font: 500 13px/1 var(--font-body);
+}
+.home-shot-link:hover .home-shot-tag {
+  background: var(--floodlight);
+  color: #14130f;
+}
+.home-shot-caption {
+  margin: 12px 2px 0;
+  font: 400 13px/1.45 var(--font-body);
+  color: var(--chalk-2);
+}
 .home-cta {
   display: flex;
   flex-wrap: wrap;
@@ -276,6 +333,17 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* Narrower than two columns: the loop goes under the promise and its button. */
+@media (max-width: 1080px) {
+  .home-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px;
+  }
+  .home-shot {
+    max-width: 720px;
+  }
 }
 
 @media (max-width: 760px) {
