@@ -31,7 +31,7 @@ during this look and at no other time before his pass. The caption is a verified
    (No. 9) comes into view.
 2. **Take the look away.** [Without the look](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical):
    the same moment re-simulated with that one scan removed. He no longer knows where Varnhall is,
-   and plays it back to K. Annersley (No. 4); **With the look** switches back to the pass to
+   and plays it back to K. Annersley (No. 4); **With the scan** switches back to the pass to
    Varnhall. Without the look, <!--num:H1-->33 of 40<!--/num--> held-out seeds decide differently
    ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
 3. **Hear the crew explain it, then try to fool the checker.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
@@ -52,7 +52,7 @@ doors are always in the header beside one **⋯ Settings** menu (the moment, the
 language, who to follow, sound, view options and the full tour).
 [**The look**](https://ttesite1ff906.z14.web.core.windows.net/?door=look) is the
 hero moment's story in about a minute: his scan, the run without it, the two compared from above
-(with **Step through his looks** and **With two more looks** one link away) and the Verifier
+(with **Step through his looks** and **With two more scans** one link away) and the Verifier
 refusing a wrong number, then an end card whose only choices are the other two doors and
 **Watch again**. [**Your turn**](https://ttesite1ff906.z14.web.core.windows.net/?door=turn)
 puts you in his boots: **Make his call**, **See through his eyes** and **Train your scanning**.
@@ -90,7 +90,7 @@ Also in the app, each a few clicks from the moment:
   forward, with the options each look opens or closes.
 - **Scroll reveal.** Chapter cards ease into view and headings lift word by word as the reader
   scrolls. Deep links leave text visible, and reduced motion disables the animation.
-- **With two more looks.** In the "Without the look" panel, the opposite experiment: add one look
+- **With two more scans.** In the "Without the scan" panel, the opposite experiment: add one look
   to his left and one to his right and his decision changes in <!--num:H10.k-->0<!--/num--> of
   <!--num:H10.n-->40<!--/num--> held-out seeds. More looks are not the right look
   ([extra_looks](eval/reports/extra_looks_blind_side_run.md)).
@@ -181,7 +181,7 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
 2. **With and without that look.** [Without the look, at his decision](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical):
    the same moment re-simulated with that one scan removed. His picture of Varnhall is now 12 m
    off, and his pass options point backwards; he plays it back to K. Annersley (No. 4). Click
-   **With the look**: one thick line to Varnhall. Over 40 held-out seeds, <!--num:H1.k-->33<!--/num--> decide differently
+   **With the scan**: one thick line to Varnhall. Over 40 held-out seeds, <!--num:H1.k-->33<!--/num--> decide differently
    without the look ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).
 3. **A live breakdown, in Chinese, for the analyst.** [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0):
    the match streams from the API at 25 Hz onto the tactical board with pitch control, the
