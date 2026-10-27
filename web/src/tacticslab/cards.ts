@@ -341,7 +341,7 @@ function corners(hero: Hero, view: Context): Built {
         label: "Corner hero's marking",
         values: [
           sep
-            ? `${sep.factual.toFixed(1)} m with the look · ${sep.counterfactual.toFixed(1)} m without`
+            ? `${sep.factual.toFixed(1)} m with the scan · ${sep.counterfactual.toFixed(1)} m without`
             : dash,
         ],
         pro: "Marker-runner separation when the cutback resolves, compared between the factual scan and its removal.",
@@ -356,10 +356,10 @@ function corners(hero: Hero, view: Context): Built {
       },
       {
         id: "look_outcome",
-        label: "The look and the outcome",
+        label: "The scan and the outcome",
         values: [
           marker
-            ? `${marker.resolved.factual.type} with the look · ${marker.resolved.counterfactual.type} without`
+            ? `${marker.resolved.factual.type} with the scan · ${marker.resolved.counterfactual.type} without`
             : dash,
         ],
         pro: "The cutback's terminal event with the key scan and without it: reception, interception or out.",

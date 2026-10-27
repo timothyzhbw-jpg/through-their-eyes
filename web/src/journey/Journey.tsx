@@ -306,7 +306,7 @@ export function ComparePanel() {
       lede={
         hero.counterfactual
           ? hero.keyScan
-            ? `Try the simulation: ${tagOf(personOf(hero, hero.heroId!))} with his deliberate look, then the same seconds re-simulated without it. ${blurbOf(hero)} Each side is told by its checked lines.`
+            ? `Try the simulation: ${tagOf(personOf(hero, hero.heroId!))} with his deliberate scan, then the same seconds re-simulated without it. ${blurbOf(hero)} Each side is told by its checked lines.`
             : `${blurbOf(hero)} Watch it, then the same seconds re-simulated with that one change; each side is told by its checked lines.`
           : blurbOf(hero)
       }
@@ -315,7 +315,7 @@ export function ComparePanel() {
     >
       <div className="pick-row">
         <button type="button" className="btn" onClick={() => show("look")}>
-          {hero.keyScan ? "With the look" : "Watch the moment"}
+          {hero.keyScan ? "With the scan" : "Watch the moment"}
         </button>
         {hero.counterfactual && (
           <>
@@ -497,7 +497,7 @@ function BroadcastPanel() {
             className="btn"
             title={
               steps.unavailable
-                ? "The moment with his look and without it, on The look"
+                ? "The moment with his scan and without it, on The look"
                 : "His looks before the ball arrived, step by step: the run he saw, then his decision"
             }
             onClick={run}

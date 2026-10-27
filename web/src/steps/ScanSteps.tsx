@@ -240,7 +240,7 @@ function viewLabel(step: Step): string {
     return step.id === "drop_back"
       ? "Where he drops back to, on the board"
       : "Through his eyes, as he receives the ball";
-  return step.missing ? "Through his eyes, with no look here" : "Through his eyes, frozen mid-look";
+  return step.missing ? "Through his eyes, with no scan here" : "Through his eyes, frozen mid-look";
 }
 
 function viewTag(step: Step, run: string): string {
@@ -250,7 +250,7 @@ function viewTag(step: Step, run: string): string {
     return step.id === "drop_back"
       ? `After his look left · ${run}`
       : `As the ball reaches him · ${run}`;
-  return step.missing ? `No look · ${run}` : `Frozen mid-look · ${run}`;
+  return step.missing ? `No scan · ${run}` : `Frozen mid-look · ${run}`;
 }
 
 /** One view's place: its picture (kept mounted, so moving it to the corner never rebuilds its

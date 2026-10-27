@@ -141,7 +141,7 @@ describe("view options", () => {
       "Pass options",
       "Blind side",
       "Pitch control",
-      "Ghost: no look",
+      "Ghost: no scan",
     ])
       expect(names, n).toContain(n);
     expect(names.filter((n) => n === "Belief ghosts")).toHaveLength(1); // one toggle, one state
@@ -355,9 +355,9 @@ describe("moment card", () => {
     const page = mount(offline(), <MomentCard />);
     const card = page.querySelector("aside.moment-card")!;
     expect(card.querySelector(".kicker")).toBeNull(); // no mono label over the title
-    expect(text(card.querySelector("h2"))).toBe("One look changed his pass.");
+    expect(text(card.querySelector("h2"))).toBe("One scan changed his pass.");
     expect(text(card.querySelector(".card-body"))).toBe(
-      "Through the midfielder's eyes, with and without one look.",
+      "Through the midfielder's eyes, with and without one scan.",
     );
     expect(card.querySelectorAll(".btn-primary")).toHaveLength(1);
     expect(text(card.querySelector(".btn-primary"))).toBe("Play breakdown");
@@ -375,7 +375,7 @@ describe("moment card", () => {
     const session = online();
     const page = mount(session, <MomentCard />);
     const card = page.querySelector("aside.moment-card")!;
-    expect(text(card.querySelector("h2"))).toBe("One look changed his pass.");
+    expect(text(card.querySelector("h2"))).toBe("One scan changed his pass.");
     expect(text(page)).not.toContain("Watching the stream");
     expect(text(page)).not.toContain("waiting for the moment");
     expect(text(page)).not.toContain("You left the stream");

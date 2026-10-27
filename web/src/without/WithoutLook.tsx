@@ -131,7 +131,7 @@ export function WithoutLookNote() {
   if (!shown.length) return null;
   const zones = line("pass_zones");
   return (
-    <div className="without-note" role="note" aria-label="The run without the look">
+    <div className="without-note" role="note" aria-label="The run without the scan">
       {shown.map((l) => (
         <p key={l.id} className={`without-line ${l.id}`}>
           <LineText text={l.text} verified claims={lineClaims(narration, l)} />
@@ -221,11 +221,11 @@ function CompareSwitch({
   count: number;
 }) {
   const options: { value: Compare; label: string }[] = [
-    { value: "without", label: "Without the look" },
-    { value: "extra", label: `With ${countWord(count)} more looks` },
+    { value: "without", label: "Without the scan" },
+    { value: "extra", label: `With ${countWord(count)} more scans` },
   ];
   return (
-    <div className="compare-switch" role="group" aria-label="Compare his look with">
+    <div className="compare-switch" role="group" aria-label="Compare his scan with">
       {options.map((o) => (
         <button
           key={o.value}
@@ -329,7 +329,7 @@ export function RemovedLookEdge() {
   if (!on || !w?.side) return null;
   return (
     <div className={`removed-edge ${w.side}`} aria-hidden="true">
-      <span>Removed look</span>
+      <span>Removed scan</span>
     </div>
   );
 }
@@ -488,7 +488,7 @@ function XtExplainer({
         </svg>
         <p className="xt-legend">
           <i className="factual" aria-hidden="true" /> His pass{" "}
-          <i className="counterfactual" aria-hidden="true" /> Without the look
+          <i className="counterfactual" aria-hidden="true" /> Without the scan
         </p>
         <div className="xt-how">
           <p>

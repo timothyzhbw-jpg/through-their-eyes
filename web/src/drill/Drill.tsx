@@ -162,7 +162,7 @@ function DrillView(props: {
         )}
         {result && (
           <p className="dr-tag" aria-hidden="true">
-            Gold: {locked?.cell ? "your look's" : "no look's"} run · his real run
+            Gold: {locked?.cell ? "your scan's" : "no scan's"} run · his real run
           </p>
         )}
       </div>
@@ -236,8 +236,8 @@ function Overlay({ d }: { d: Drill }) {
       {locked && looks && (
         <p className="dr-locked" aria-hidden="true">
           {locked.cell
-            ? `Your look: ${lookWords(looks, locked.entry, d.session.hero.dt)}`
-            : "No look"}
+            ? `Your scan: ${lookWords(looks, locked.entry, d.session.hero.dt)}`
+            : "No scan"}
         </p>
       )}
       <HeadDial d={d} />
@@ -570,7 +570,7 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
       )}
       <dl className="dr-versus" aria-label="Compared">
         <div className="yours">
-          <dt>With your look</dt>
+          <dt>With your scan</dt>
           <dd>{callLabel(r.simCall)}</dd>
         </div>
         <div>
@@ -583,7 +583,7 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
           )}
         </div>
         <div>
-          <dt>With no look</dt>
+          <dt>With no scan</dt>
           <dd>{callLabel(r.noLookCall)}</dd>
         </div>
       </dl>

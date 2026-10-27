@@ -68,7 +68,7 @@ export function drillOptions(callHero: Hero): CallOption[] {
 
 /** When and where a grid look went, in words with the grid's own values. */
 export function lookWords(looks: Looks, entry: LookEntry, dt: number): string {
-  if (entry.frame === null || entry.offset === null) return "No look";
+  if (entry.frame === null || entry.offset === null) return "No scan";
   const before = secondsBefore(looks, entry.frame, dt);
   const when = before === 0 ? "as the ball arrived" : `${before.toFixed(1)} s before the ball`;
   const where = whereLabel(entry.offset).replace(/^\w/, (c) => c.toLowerCase());

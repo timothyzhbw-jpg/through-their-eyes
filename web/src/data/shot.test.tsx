@@ -99,7 +99,7 @@ describe("a placed shot", () => {
   });
 
   it("has its own headline, blurb and label", () => {
-    expect(momentTitle(hero)).toEqual(["One look changed his", "shot."]);
+    expect(momentTitle(hero)).toEqual(["One scan changed his", "shot."]);
     expect(blurbOf(hero)).toMatch(/keeper/);
     expect(blurbOf(hero)).not.toMatch(/A hero moment:/);
     expect(scenarioLabel("far_post_finish")).toBe("The far post");

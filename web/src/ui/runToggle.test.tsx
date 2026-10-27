@@ -109,7 +109,7 @@ describe("the run without the look", () => {
     expect(session.feed!.state.get().status).toBe("streaming");
     expect(session.feed!.state.get().moments.some((m) => m.id === session.moment.id)).toBe(false);
 
-    const without = button(page, "Without the look");
+    const without = button(page, "Without the scan");
     expect(without.getAttribute("aria-disabled")).toBe("true");
     expect(described(without)).toBe("Available once the moment arrives");
     expect(page.querySelector("[data-testid=run-outcome]")).toBeNull();
@@ -151,7 +151,7 @@ describe("the run without the look", () => {
       ws.open();
       ws.push(hello(), frameMsg(0), momentMsg(HERO_MOMENT, 0));
     });
-    const without = button(page, "Without the look");
+    const without = button(page, "Without the scan");
     expect(without.getAttribute("aria-disabled")).not.toBe("true");
     click(without);
     expect(session.playback.get()).toMatchObject({ mode: "counterfactual", live: false });
@@ -166,7 +166,7 @@ describe("the run without the look", () => {
         <RunToggle />
       </SessionContext.Provider>,
     );
-    const without = button(page, "Without the look");
+    const without = button(page, "Without the scan");
     expect(without.getAttribute("aria-disabled")).not.toBe("true");
     click(without);
     expect(session.playback.get().mode).toBe("counterfactual");
@@ -185,7 +185,7 @@ describe("the run without the look", () => {
     act(() => session.screen.set({ hero: breakdown }));
     const toggle = page.querySelector(".seg.run");
     expect(toggle).not.toBeNull();
-    const without = button(toggle!, "Without the look");
+    const without = button(toggle!, "Without the scan");
     expect(without.getAttribute("aria-disabled")).not.toBe("true");
     click(without);
     expect(without.getAttribute("aria-pressed")).toBe("true");

@@ -369,8 +369,8 @@ describe("the bar and its panels", () => {
     const { container, session } = mount(<ComparePanel />);
     await act(() => withoutLookOf(session, undefined, "/data/").load());
     const text = container.textContent!;
-    expect(text).toContain("With the look");
-    expect(text).toContain("Without the look");
+    expect(text).toContain("With the scan");
+    expect(text).toContain("Without the scan");
     expect(text).toContain("Compare from above");
     expect(text).toContain("Step through his looks");
     const [withLook, without] = [...container.querySelectorAll(".journey-compare .tile")];
@@ -408,7 +408,7 @@ describe("the bar and its panels", () => {
   it("introduces the simulation only when the counterfactual removes the hero's key look", () => {
     const withLook = mount(<ComparePanel />).container.querySelector(".lede")!.textContent!;
     expect(withLook).toContain(
-      `Try the simulation: ${tagOf(personOf(hero, hero.heroId!))} with his deliberate look`,
+      `Try the simulation: ${tagOf(personOf(hero, hero.heroId!))} with his deliberate scan`,
     );
     expect(withLook).toContain("Each side is told by its checked lines.");
     expect(withLook).not.toContain("Watch it, then the same seconds");

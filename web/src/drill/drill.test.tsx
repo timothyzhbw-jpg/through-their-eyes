@@ -147,7 +147,7 @@ describe("Academy drill: the look, the call, the result", () => {
     expect(slider.getAttribute("aria-valuetext")).toMatch(/^1[34]\d° to his right of the ball$/);
     key(slider, "keyup", "ArrowRight");
     expect(textOf(el.querySelector(".dr-locked"))).toBe(
-      "Your look: 0.8 s before the ball, 150° over his right shoulder",
+      "Your scan: 0.8 s before the ball, 150° over his right shoulder",
     );
     expect(textOf(el.querySelector(".dr-card .dr-lead"))).toBe(
       "Your look: 0.8 s before the ball, 150° over his right shoulder.",

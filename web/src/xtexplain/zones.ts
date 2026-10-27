@@ -169,7 +169,7 @@ const signed = (v: number, digits: number) => {
 /** "From his own half, central, into the attacking third, right half-space." */
 export function whereLine(m: Move, owner: Owner): string {
   const [a, b] = [zoneName(m.from.zone, owner), zoneName(m.to.zone, owner)];
-  if (m.mode === "runs") return `Without the look the ball ends in ${a}; with it, in ${b}.`;
+  if (m.mode === "runs") return `Without the scan the ball ends in ${a}; with it, in ${b}.`;
   return a === b ? `Within ${a}.` : `From ${a}, into ${b}.`;
 }
 
@@ -221,7 +221,7 @@ export function plainLine(m: Move): string {
           : null;
   if (m.mode === "runs") {
     const tail = effect ? `${capital(effect)}, and that is ${threat}.` : `That is ${threat}.`;
-    return `With the look the ball ended ${PLACE_AT[b]}; without it, ${PLACE_AT[a]}. ${tail}`;
+    return `With the scan the ball ended ${PLACE_AT[b]}; without it, ${PLACE_AT[a]}. ${tail}`;
   }
   const then = effect ? `${effect}, and that is ${threat}.` : `and that is ${threat}.`;
   return rank === 0

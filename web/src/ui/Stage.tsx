@@ -36,17 +36,17 @@ import { captionStoryPrefs, setCaptionStory } from "./captionStory";
 
 export const BLURB: Record<string, string> = {
   blind_side_run:
-    "See what the midfielder saw, and what he would have done without one look over his shoulder.",
+    "See what the midfielder saw, and what he would have done without one scan over his shoulder.",
   press_escape:
     "See what the centre-back saw with an opponent closing in, and what carrying the ball would have cost.",
   screened_shot:
     "See what the keeper saw past the players in front of him, and what one step across his goal changed.",
   cutback_scan:
-    "See what the winger saw when he looked into the box, and what he would have done without that one look.",
+    "See what the winger saw when he looked into the box, and what he would have done without that one scan.",
   far_post_finish:
-    "See what the striker saw of the keeper as the cutback came, and where he would have shot without one look at the goal.",
+    "See what the striker saw of the keeper as the cutback came, and where he would have shot without one scan at the goal.",
   corner_blind_side:
-    "A short corner. See what the centre-back saw of the man he marks, and where that man would have been without one look over his shoulder.",
+    "A short corner. See what the centre-back saw of the man he marks, and where that man would have been without one scan over his shoulder.",
 };
 
 export const blurbOf = (hero: Hero): string =>
@@ -90,10 +90,10 @@ export function momentTitle(hero: Hero): [string, string] {
   if (hero.keyScan) {
     if (did && without && did !== without)
       return [
-        "One look changed his",
+        "One scan changed his",
         did.startsWith("pass:") ? "pass." : isShot(did) ? "shot." : "decision.",
       ];
-    return ["One look, and", "the same choice."];
+    return ["One scan, and", "the same choice."];
   }
   if (did) return ["Under pressure, he", `${didPhrase(did)}.`];
   return ["The", "moment."];
@@ -105,10 +105,10 @@ const KEPT_MARGIN_M = 1; // closer to his man by more than this with the look: t
 function markerTitle(hero: Hero, m: NonNullable<Hero["marker"]>): [string, string] {
   const won = m.resolved.factual;
   if (won.type === "interception" && won.player === hero.heroId)
-    return ["One look, and he", "won the ball."];
+    return ["One scan, and he", "won the ball."];
   if (m.separation.counterfactual - m.separation.factual > KEPT_MARGIN_M)
-    return ["One look kept him", "with his man."];
-  return ["One look, and", "the same outcome."];
+    return ["One scan kept him", "with his man."];
+  return ["One scan, and", "the same outcome."];
 }
 
 export function MomentTitle({ hero }: { hero: Hero }) {
@@ -786,10 +786,10 @@ export function MomentCard() {
 
 // The card's one line under the title: short; the story below has the full lede (BLURB).
 export const CARD_LINE: Record<string, string> = {
-  blind_side_run: "Through the midfielder's eyes, with and without one look.",
+  blind_side_run: "Through the midfielder's eyes, with and without one scan.",
   press_escape: "Through the centre-back's eyes, as the press closes in.",
   screened_shot: "Through the keeper's eyes, past the players in front of him.",
-  cutback_scan: "Through the winger's eyes, with and without one look.",
+  cutback_scan: "Through the winger's eyes, with and without one scan.",
   far_post_finish: "Through the striker's eyes, as the cutback comes.",
   corner_blind_side: "A short corner, through the eyes of the man marking.",
 };

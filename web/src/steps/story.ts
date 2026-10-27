@@ -378,7 +378,7 @@ export function pictureView(
     if (step.missing || !p) return null;
     return {
       news: newsLines(p.news ?? [], who),
-      optionsLabel: "His options: without this look → with it",
+      optionsLabel: "His options: without this scan → with it",
       optionsNote: `Both are computed at the same frozen frame. ↑ ↓ cross 50%; ↗ ↘ move ${Math.round(SHIFT * 100)} points or more.`,
       options: optionLines(p.options, p.before, p.opened, p.closed, who, teaching),
       compare: true,

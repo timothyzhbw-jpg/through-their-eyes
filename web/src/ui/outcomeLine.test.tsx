@@ -111,7 +111,7 @@ describe("the line beside the run switch", () => {
       ?.textContent?.replace(/\s+/g, " ")
       .trim();
     const line = outcomeLine(hero)!;
-    expect(text).toBe(`With the look → ${line.withLook} · Without → ${line.without}`);
+    expect(text).toBe(`With the scan → ${line.withLook} · Without → ${line.without}`);
   });
 
   it("is left out where the moment has no without-look run", () => {

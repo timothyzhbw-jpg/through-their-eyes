@@ -286,16 +286,16 @@ describe("Take his eyes: looking and the result", () => {
     expect(te.playback.get()).toMatchObject({ mode: "factual", whatIf: "look:H8:0050:+090" });
     const ghost = stage.kind === "hero" ? stage.whatIfs!.options[0] : null;
     expect(ghost?.run?.start).toBe(75);
-    expect(ghost?.tag).toBe("your look: pass to K. Annersley");
-    expect(textOf(el.querySelector(".te-card h2"))).toBe("Your look changes his call");
+    expect(ghost?.tag).toBe("your scan: pass to K. Annersley");
+    expect(textOf(el.querySelector(".te-card h2"))).toBe("Your scan changes his call");
     const versus = [...el.querySelectorAll(".te-versus div")].map((d) => [
       textOf(d.querySelector("dt")),
       textOf(d.querySelector("dd")),
     ]);
     expect(versus).toEqual([
-      ["With your look", "Pass to K. Annersley"],
+      ["With your scan", "Pass to K. Annersley"],
       ["What he did", "Pass to N. Varnhall"],
-      ["With no look", "Pass to K. Annersley"],
+      ["With no scan", "Pass to K. Annersley"],
     ]);
   });
 
@@ -327,7 +327,7 @@ describe("Take his eyes: looking and the result", () => {
     click(button(el, "His picture"));
     expect(te.playback.get()).toMatchObject({ mode: "counterfactual", frame: 75, whatIf: null });
     expect(te.stage()!.hero.runs.counterfactual.decision?.chosen).toBe("pass:H9");
-    click(button(el, "No look"));
+    click(button(el, "No scan"));
     expect(te.stage()!.hero.runs.counterfactual.decision?.chosen).toBe("pass:H4");
     click(button(el, "Try another look"));
     expect(te.state.get()).toMatchObject({ step: "choosing", frame: 50, offset: -150 });

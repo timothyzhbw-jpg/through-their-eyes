@@ -424,14 +424,14 @@ export function runLabels(hero: Hero): RunLabels {
     };
   }
   return {
-    factual: "With the look",
-    counterfactual: "Without the look",
-    ghostOfFactual: "Ghost: with the look",
-    ghostOfCounterfactual: "Ghost: no look",
-    tag: { factual: "with the look", counterfactual: "without the look" },
+    factual: "With the scan",
+    counterfactual: "Without the scan",
+    ghostOfFactual: "Ghost: with the scan",
+    ghostOfCounterfactual: "Ghost: no scan",
+    tag: { factual: "with the scan", counterfactual: "without the scan" },
     // The verdict reads "…, in expected threat (xT)." A marker's look is worth a turnover chance.
     gain: hero.marker
-      ? "Worth of the look to his side"
+      ? "Worth of the scan to his side"
       : placedShot(hero)
         ? "Chance of scoring gained by looking"
         : "Gained by looking",

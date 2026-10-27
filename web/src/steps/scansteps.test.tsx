@@ -210,10 +210,10 @@ describe("His looks: stepping", () => {
 describe("His looks: without the look", () => {
   it("shows the removed look as missing, at the same moment, and his other decision", async () => {
     const { st, el } = await opened();
-    click(button(el, "Without the look"));
+    click(button(el, "Without the scan"));
     expect(st.state.get()).toMatchObject({ mode: "counterfactual", index: 0 });
     expect(st.playback.get()).toMatchObject({ mode: "counterfactual", frame: 60 });
-    expect(textOf(el.querySelector(".ss-card h2"))).toBe("No look here");
+    expect(textOf(el.querySelector(".ss-card h2"))).toBe("No scan here");
     expect(textOf(el.querySelector(".ss-kicker"))).toBe("Look 1 · not taken in this run");
     expect(el.querySelector(".ss-dot.missing")).not.toBeNull();
     expect(lines(el)).toEqual([
@@ -224,7 +224,7 @@ describe("His looks: without the look", () => {
     click(button(el, "Next"));
     expect(lines(el)).toContain("So he passes to K. Annersley.");
     // Back to the run with the look: the same step, the decision.
-    click(button(el, "With the look"));
+    click(button(el, "With the scan"));
     expect(st.state.get()).toMatchObject({ mode: "factual", index: 1 });
   });
 });
@@ -343,7 +343,7 @@ describe("His looks: the coach's example", () => {
     expect(textOf(el.querySelector(".ss-kicker"))).toBe("Look 1");
     expect(el.querySelectorAll(".ss-news li").length).toBeGreaterThan(0);
     expect(textOf(el.querySelector(".ss-picture"))).toContain(
-      "His options: without this look → with it",
+      "His options: without this scan → with it",
     );
     expect(textOf(el.querySelector(".ss-picture"))).toContain(
       "Both are computed at the same frozen frame. ↑ ↓ cross 50%; ↗ ↘ move 20 points or more.",
