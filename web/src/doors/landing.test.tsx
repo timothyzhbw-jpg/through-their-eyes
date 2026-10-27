@@ -223,9 +223,7 @@ describe("the product beside the promise", () => {
     for (const path of [HOME_SHOT.video, HOME_SHOT.poster]) {
       expect(statSync(`public${path}`).size, path).toBeGreaterThan(10_000); // vitest runs in web/
     }
-    expect(textOf(page.querySelector(".home-shot-link"))).toBe(
-      "Live app · his eyes at the key scan",
-    );
+    expect(textOf(page.querySelector(".home-shot-link"))).toBe("Live app");
   });
 
   it("stays a still under reduced motion, with nothing to pause", () => {
@@ -238,23 +236,37 @@ describe("the product beside the promise", () => {
     expect(page.querySelector(".home-shot-pause")).toBeNull();
   });
 
-  it("pauses and plays again from its own button, outside the link (WCAG 2.2.2)", () => {
+  it("pauses and plays again from its own button, which follows the video (WCAG 2.2.2)", () => {
     motion(false);
     const page = mount(offline());
     const video = page.querySelector<HTMLVideoElement>(".home-shot video")!;
-    const pause = vi.spyOn(video, "pause").mockImplementation(() => {});
-    const play = vi.spyOn(video, "play").mockImplementation(() => Promise.resolve());
+    let paused = true;
+    Object.defineProperty(video, "paused", { get: () => paused });
+    const fire = (type: "play" | "pause") => {
+      paused = type === "pause";
+      act(() => {
+        video.dispatchEvent(new Event(type));
+      });
+    };
+    const pause = vi.spyOn(video, "pause").mockImplementation(() => fire("pause"));
+    const play = vi.spyOn(video, "play").mockImplementation(() => {
+      fire("play");
+      return Promise.resolve();
+    });
     const button = page.querySelector<HTMLButtonElement>("button.home-shot-pause")!;
     expect(button.closest("a")).toBeNull();
     expect(button.getAttribute("aria-label")).toBe("Pause the loop");
+    // Until the video plays (autoplay may be refused), the button says it is paused.
+    expect(button.getAttribute("aria-pressed")).toBe("true");
+    fire("play");
     expect(button.getAttribute("aria-pressed")).toBe("false");
     act(() => button.click());
     expect(pause).toHaveBeenCalledTimes(1);
-    expect(button.getAttribute("aria-label")).toBe("Play the loop");
     expect(button.getAttribute("aria-pressed")).toBe("true");
     act(() => button.click());
     expect(play).toHaveBeenCalledTimes(1);
-    expect(button.getAttribute("aria-label")).toBe("Pause the loop");
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+    expect(button.getAttribute("aria-label")).toBe("Pause the loop"); // one name; the state is pressed
     expect(doors.get().door).toBe("home"); // the pause never opens the story
   });
 
@@ -264,9 +276,7 @@ describe("the product beside the promise", () => {
     const shot = page.querySelector<HTMLAnchorElement>("a.home-shot-link")!;
     expect(shot.getAttribute("href")).toBe("/?tour=quick");
     // The visible tag starts its name (WCAG 2.5.3), then what it does.
-    expect(shot.getAttribute("aria-label")).toBe(
-      "Live app · his eyes at the key scan. Watch the look (60 s)",
-    );
+    expect(shot.getAttribute("aria-label")).toBe("Live app. Watch the look (60 s)");
     const modified = new MouseEvent("click", { bubbles: true, cancelable: true, metaKey: true });
     act(() => {
       shot.dispatchEvent(modified);

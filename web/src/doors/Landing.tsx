@@ -111,21 +111,21 @@ export function Landing() {
  * The picture opens the same story as the primary button. */
 function HomeShot({ label, watch }: { label: string; watch: () => void }) {
   const [still] = useState(prefersReducedMotion);
-  const [playing, setPlaying] = useState(!still);
+  // Paused until the video says it plays: autoplay can be refused (iOS Low Power Mode).
+  const [paused, setPaused] = useState(true);
   const video = useRef<HTMLVideoElement | null>(null);
   const toggle = () => {
     const el = video.current;
     if (!el) return;
-    if (playing) el.pause();
-    else void el.play().catch(() => {});
-    setPlaying(!playing);
+    if (el.paused) void el.play().catch(() => {});
+    else el.pause();
   };
   return (
     <figure className="home-shot">
       <a
         className="home-shot-link"
         href={href(HOME_LINKS.story)}
-        aria-label={`Live app · his eyes at the key scan. ${label}`}
+        aria-label={`Live app. ${label}`}
         onClick={(e: MouseEvent<HTMLAnchorElement>) => {
           if (!plainClick(e)) return;
           e.preventDefault();
@@ -137,12 +137,14 @@ function HomeShot({ label, watch }: { label: string; watch: () => void }) {
           src={HOME_SHOT.video}
           poster={HOME_SHOT.poster}
           width="1152"
-          height="748"
+          height="688"
           autoPlay={!still}
           loop
           playsInline
           preload={still ? "none" : "auto"}
           aria-hidden="true"
+          onPlay={() => setPaused(false)}
+          onPause={() => setPaused(true)}
           // React sets muted as a property only; Safari wants the attribute before it autoplays.
           ref={(el) => {
             video.current = el;
@@ -152,18 +154,18 @@ function HomeShot({ label, watch }: { label: string; watch: () => void }) {
           }}
         />
         <span className="home-shot-tag">
-          <PlayIcon /> Live app · his eyes at the key scan
+          <PlayIcon /> Live app
         </span>
       </a>
       {!still && (
         <button
           type="button"
           className="home-shot-pause"
-          aria-label={playing ? "Pause the loop" : "Play the loop"}
-          aria-pressed={!playing}
+          aria-label="Pause the loop"
+          aria-pressed={paused}
           onClick={toggle}
         >
-          {playing ? <PauseIcon /> : <PlayIcon />}
+          {paused ? <PlayIcon /> : <PauseIcon />}
         </button>
       )}
       <figcaption className="home-shot-caption">

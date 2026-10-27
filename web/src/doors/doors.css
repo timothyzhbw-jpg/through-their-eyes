@@ -211,14 +211,14 @@
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 1152 / 748;
+  aspect-ratio: 1152 / 688;
   object-fit: cover;
   background: #0b0d0c;
 }
 .home-shot-tag {
   position: absolute;
-  top: 14px;
-  right: 54px; /* the sky, beside the pause: clear of the app's own tags and timeline */
+  left: 14px;
+  bottom: 14px; /* on the grass, clear of the app's own caption and tags */
   display: inline-flex;
   align-items: center;
   gap: 8px;
