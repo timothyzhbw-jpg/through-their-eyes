@@ -441,7 +441,7 @@ describe("every step resolves on the hero moment", () => {
     expect(session.playback.get().mode).toBe("counterfactual");
     expect(session.playback.get().playing).toBe(true);
     expect(session.playback.get().cfGhost).toBe(true);
-    expect(textOf(card())).toContain("Without the look");
+    expect(textOf(card())).toContain("Without the scan");
 
     await next(); // the evidence: a line with a number, opened at its evidence frame
     expect(session.playback.get().evidenceLine).toBe("L2");
@@ -652,7 +652,7 @@ describe("moving and leaving", () => {
         }
         // The door the step left is on screen; its tab takes the viewer back to the picture.
         await click(buttonIn(container.querySelector(".door-tabs"), "The look"));
-        await click(buttonIn(container.querySelector(".stage-run"), "With the look"));
+        await click(buttonIn(container.querySelector(".stage-run"), "With the scan"));
         expect(session.playback.get().mode).toBe("factual");
         act(() => mounted.pop()!.root.unmount());
         container.remove();

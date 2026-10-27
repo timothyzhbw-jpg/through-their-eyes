@@ -68,7 +68,7 @@ const textOf = (el: Element | null | undefined) => el?.textContent?.replace(/\s+
 const PITCH =
   "See what they saw. An AI studio that explains key moments through the player's own " +
   "perception — where he looked before the ball arrived, what he saw, what he believed — and " +
-  "re-simulates the moment without the look that made the play.";
+  "re-simulates the moment without the scan that made the play.";
 
 /** Two heroes, so the card offers two pairs of eyes. */
 function twoHeroes() {
@@ -83,7 +83,7 @@ describe("the first screen", () => {
     const dialog = dialogOf(page)!;
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     const title = document.getElementById(dialog.getAttribute("aria-labelledby")!);
-    expect(textOf(title)).toBe("One look over his shoulder changed his pass. See why.");
+    expect(textOf(title)).toBe("One scan over his shoulder changed his pass. See why.");
     expect(title?.querySelector("em")?.textContent).toBe("See why.");
     expect(dialog.textContent).toContain("A synthetic match · every player fictional");
     expect(document.activeElement).toBe(button(page, "Watch the look"));
@@ -100,7 +100,7 @@ describe("the first screen", () => {
 
   it("has a hook with no numbers for every kind of page", () => {
     expect(hookOf(offline())).toEqual({
-      line: "One look over his shoulder changed his pass.",
+      line: "One scan over his shoulder changed his pass.",
       call: "See why.",
     });
     const match = createMatchSession(parseHero(matchExport()), { api: null, dataUrl: "/data/" });

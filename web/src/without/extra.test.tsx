@@ -121,23 +121,23 @@ describe("in the verdict", () => {
   it("offers With two more looks beside Without the look, and shows its verified lines", async () => {
     const session = await loaded();
     const page = mount(session, <WithoutLookLines />);
-    const group = page.querySelector("[role=group][aria-label='Compare his look with']")!;
+    const group = page.querySelector("[role=group][aria-label='Compare his scan with']")!;
     expect([...group.querySelectorAll("button")].map((b) => text(b))).toEqual([
-      "Without the look",
-      "With two more looks",
+      "Without the scan",
+      "With two more scans",
     ]);
     // Without the look stays the default.
-    expect(button(group, "Without the look").getAttribute("aria-pressed")).toBe("true");
+    expect(button(group, "Without the scan").getAttribute("aria-pressed")).toBe("true");
     expect(text(page)).toContain("Only this look changes");
-    act(() => button(group, "With two more looks").click());
-    expect(button(group, "With two more looks").getAttribute("aria-pressed")).toBe("true");
+    act(() => button(group, "With two more scans").click());
+    expect(button(group, "With two more scans").getAttribute("aria-pressed")).toBe("true");
     for (const id of ["added_looks", "extra_result", "extra_zones"])
       expect(text(page)).toContain(lineText("en", id));
     expect(text(page)).not.toContain("Only this look changes");
     expect(page.querySelector(".source")?.getAttribute("title")).toBe(
       "Eval result from eval/reports/extra_looks_blind_side_run.md",
     );
-    act(() => button(group, "Without the look").click());
+    act(() => button(group, "Without the scan").click());
     expect(text(page)).toContain("Only this look changes");
   });
 
@@ -145,7 +145,7 @@ describe("in the verdict", () => {
     const session = await loaded();
     act(() => session.breakdown.set({ language: "zh" }));
     const page = mount(session, <WithoutLookLines />);
-    act(() => button(page, "With two more looks").click());
+    act(() => button(page, "With two more scans").click());
     expect(text(page)).toContain(lineText("zh", "added_looks"));
   });
 
@@ -153,13 +153,13 @@ describe("in the verdict", () => {
     const session = await loaded();
     expect(countWord(extraBundle.added.length)).toBe("two"); // the label follows the data
     const first = mount(session, <WithoutLookLines />);
-    act(() => button(first, "With two more looks").click());
+    act(() => button(first, "With two more scans").click());
     mounted.splice(0).forEach(({ root, container }) => {
       act(() => root.unmount());
       container.remove();
     });
     const again = mount(session, <WithoutLookLines />);
-    expect(button(again, "With two more looks").getAttribute("aria-pressed")).toBe("true");
+    expect(button(again, "With two more scans").getAttribute("aria-pressed")).toBe("true");
     expect(text(again)).toContain(lineText("en", "added_looks"));
   });
 

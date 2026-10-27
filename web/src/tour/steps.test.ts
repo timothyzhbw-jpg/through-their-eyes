@@ -99,8 +99,8 @@ describe("the step list", () => {
       }
     }
     const env = envOf(offline());
-    expect(wordsOf(STEPS[1], env).title).toBe("Without the look");
-    expect(wordsOf(STEPS[1], env).caption).toContain("one change, without the look.");
+    expect(wordsOf(STEPS[1], env).title).toBe("Without the scan");
+    expect(wordsOf(STEPS[1], env).caption).toContain("one change, without the scan.");
   });
 });
 
@@ -116,7 +116,7 @@ describe("the quick tour: door 1's story", () => {
       "That's the look",
     ]);
     expect(wordsOf(QUICK_STEPS[0], env).caption).toContain("J. Ferriday's view");
-    expect(wordsOf(QUICK_STEPS[1], env).caption).toContain("re-simulated without the look.");
+    expect(wordsOf(QUICK_STEPS[1], env).caption).toContain("re-simulated without the scan.");
     expect(QUICK_STEPS.every((s) => s.door === "look")).toBe(true);
     // The compare step links to the scan story; the last step is the end card with the doors.
     expect(QUICK_STEPS.find((s) => s.id === "compare")!.act).toBe("scanSteps");

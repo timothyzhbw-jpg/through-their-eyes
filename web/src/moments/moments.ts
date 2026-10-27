@@ -25,7 +25,7 @@ export const MOMENT_LINKS: readonly MomentLink[] = [
     id: "look",
     label: "The look",
     query: "?intro=0",
-    title: "One look over his shoulder changes his pass",
+    title: "One scan over his shoulder changes his pass",
     scenario: "blind_side_run",
   },
   {

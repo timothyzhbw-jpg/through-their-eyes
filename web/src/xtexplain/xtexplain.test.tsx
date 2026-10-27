@@ -171,7 +171,7 @@ describe("the version per persona", () => {
     );
     const odd2 = moveOf({ mode: "runs", team: 0, from: [-30, 0], to: [40, 0], delta: -0.05 });
     expect(plainLine(odd2)).toBe(
-      "With the look the ball ended near the goal; without it, deep in its own end. That is less threat.",
+      "With the scan the ball ended near the goal; without it, deep in its own end. That is less threat.",
     );
   });
 
@@ -308,7 +308,7 @@ describe("where xT is explained", () => {
       } else {
         expect(text(el)).toContain("His pass:");
         expect(text(el)).toContain("into the attacking third, right half-space");
-        expect(text(el)).toContain("Without the look:");
+        expect(text(el)).toContain("Without the scan:");
         expect(text(el)).toContain("at the end 0.157");
         expect(text(el)).toContain("at the end 0.002");
         expect(text(dialog)).toMatch(/value iteration/);
@@ -332,7 +332,7 @@ describe("where xT is explained", () => {
     const page = mount(s, <XtClaimNote claim={cfValue(0.16)} />);
     const el = page.querySelector("[data-xt-version]")!;
     expect(el.getAttribute("data-xt-version")).toBe("concrete");
-    expect(text(el)).toContain("Without the look the ball ends in his own half, right half-space");
+    expect(text(el)).toContain("Without the scan the ball ends in his own half, right half-space");
     expect(text(el)).toContain("The difference in value is +0.16.");
     expect(text(el)).not.toContain("at the end");
   });
@@ -342,7 +342,7 @@ describe("where xT is explained", () => {
     const el = page.querySelector("[data-xt-version]")!;
     expect(el.getAttribute("data-xt-version")).toBe("plain");
     expect(text(el)).toBe(
-      "With the look the ball ended near the goal; without it, in its own half. So a shot from closer became possible, and that is more threat.",
+      "With the scan the ball ended near the goal; without it, in its own half. So a shot from closer became possible, and that is more threat.",
     );
   });
 

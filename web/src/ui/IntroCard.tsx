@@ -30,7 +30,7 @@ export function playLength(minutes: number): string {
 
 /** What the studio does, in one sentence (SPEC 0): the line-ups' pitch and the landing page's. */
 export const PITCH =
-  "An AI studio that explains key moments through the player's own perception — where he looked before the ball arrived, what he saw, what he believed — and re-simulates the moment without the look that made the play.";
+  "An AI studio that explains key moments through the player's own perception — where he looked before the ball arrived, what he saw, what he believed — and re-simulates the moment without the scan that made the play.";
 
 // Scenarios whose key scan is a look over the shoulder (SPEC 3.6): the hook can say so.
 const OVER_THE_SHOULDER = new Set(["blind_side_run", "cutback_scan"]);
@@ -49,8 +49,8 @@ export function hookOf(view: ViewSession): { line: string; call: string } {
 
 function heroHook(hero: Hero): string {
   const [lead, last] = momentTitle(hero);
-  if (lead === "One look changed his" && OVER_THE_SHOULDER.has(hero.scenario)) {
-    return `One look over his shoulder changed his ${last}`;
+  if (lead === "One scan changed his" && OVER_THE_SHOULDER.has(hero.scenario)) {
+    return `One scan over his shoulder changed his ${last}`;
   }
   return `${lead} ${last}`;
 }

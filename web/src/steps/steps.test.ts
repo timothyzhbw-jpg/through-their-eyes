@@ -56,7 +56,7 @@ describe("steps resolve from the run's scan events", () => {
       ["scan:H8:0050", true],
       ["decision", false],
     ]);
-    expect(stepTitle(cf.steps[0])).toBe("No look here");
+    expect(stepTitle(cf.steps[0])).toBe("No scan here");
     expect(stepTitle(fac.steps[0])).toBe("Over his right shoulder");
   });
 

@@ -51,8 +51,8 @@ describe("a hero without a key scan", () => {
     expect(m.keyScan).toBeNull();
     expect(m.counterfactual).toBe("cf1");
     expect(runLabels(parseHero(exportJson))).toMatchObject({
-      factual: "With the look",
-      counterfactual: "Without the look",
+      factual: "With the scan",
+      counterfactual: "Without the scan",
     });
   });
 

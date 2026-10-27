@@ -180,7 +180,7 @@ function EyesView({ te, scene }: { te: TakeEyes; scene: boolean }) {
   const board = s.step !== "looking"; // the board is the main view, but while he looks
   const hero = te.session.hero;
   return (
-    <figure className={`te-view step-${s.step}`} aria-label="The moment, with your look">
+    <figure className={`te-view step-${s.step}`} aria-label="The moment, with your scan">
       <div className="te-stage">
         {scene && stage && (
           <SessionContext.Provider key={te.shown()?.id ?? "none"} value={stage}>
@@ -206,9 +206,9 @@ function EyesView({ te, scene }: { te: TakeEyes; scene: boolean }) {
 
 function viewTag(step: string, view: ResultView): string {
   if (step === "choosing") return "Where will he look?";
-  if (step === "looking") return "Through his eyes, with your look";
-  if (view === "both") return "Gold: your look's run · his real run";
-  return view === "picture" ? "His picture with your look" : "His picture with no look";
+  if (step === "looking") return "Through his eyes, with your scan";
+  if (view === "both") return "Gold: your scan's run · his real run";
+  return view === "picture" ? "His picture with your scan" : "His picture with no scan";
 }
 
 /** The dial over the hero on the board: the cone where he will look, a handle per direction of the
@@ -515,11 +515,11 @@ function Card({ te }: { te: TakeEyes }) {
   return (
     <aside className="te-card" aria-labelledby="te-title">
       <h2 id="te-title" ref={heading} tabIndex={-1}>
-        {same ? "Same call as his" : "Your look changes his call"}
+        {same ? "Same call as his" : "Your scan changes his call"}
       </h2>
       <dl className="te-versus">
         <div className="yours">
-          <dt>With your look</dt>
+          <dt>With your scan</dt>
           <dd>{callLabel(entry.decision.chosen)}</dd>
         </div>
         <div>
@@ -527,7 +527,7 @@ function Card({ te }: { te: TakeEyes }) {
           <dd>{callLabel(looks.factual.chosen)}</dd>
         </div>
         <div>
-          <dt>With no look</dt>
+          <dt>With no scan</dt>
           <dd>{callLabel(looks.noLook.decision.chosen)}</dd>
         </div>
       </dl>
@@ -539,7 +539,7 @@ function Card({ te }: { te: TakeEyes }) {
         options={[
           { value: "both", label: "Both runs" },
           { value: "picture", label: "His picture" },
-          { value: "none", label: "No look" },
+          { value: "none", label: "No scan" },
         ]}
       />
       <div className="te-actions">

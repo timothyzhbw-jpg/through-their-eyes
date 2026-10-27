@@ -429,7 +429,7 @@ export function stepTitle(step: Step): string {
   if (step.kind === "start") return "Facing the ball";
   if (step.kind === "decision") return step.forced ? "The what-if" : "His decision";
   if (step.kind === "beat") return BEAT_TITLES[step.id][step.happened ? 0 : 1];
-  return step.missing ? "No look here" : whereLabel(step);
+  return step.missing ? "No scan here" : whereLabel(step);
 }
 
 /** The steps told on the board, top-down: his decision, and where he received the ball. The

@@ -1100,7 +1100,7 @@ async function drill(page, level) {
     await page.keyboard.up("ArrowRight");
   }
   await see(
-    page.locator(".dr-locked", { hasText: /^Your look: / }),
+    page.locator(".dr-locked", { hasText: /^Your scan: / }),
     "the look snapped to the grid",
   );
   await see(page.getByRole("heading", { name: "Your call" }), "the call at his decision");
@@ -1231,9 +1231,9 @@ async function recap(page, shoot) {
  * Verifier, the demo-data note, no sideways scroll. `follow`: then a link opens its feature (Your
  * call over Your turn, a studios' section), the header's brand comes back each time, and the
  * primary button starts door 1's story. */
-const HOME_TITLE = /^One look over his shoulder changed his pass/;
+const HOME_TITLE = /^One scan over his shoulder changed his pass/;
 const HOME_LINKS = [
-  ["The look", ["The story", "Step through his looks", "With two more looks"]],
+  ["The look", ["The story", "Step through his looks", "With two more scans"]],
   ["Your turn", ["Make his call", "See through his eyes", "Train your scanning"]],
   [
     "For studios",
@@ -1261,7 +1261,7 @@ async function landing(page, shoot, { follow = true } = {}) {
     throw new Error(`expected one primary button, "${WATCH}"; got ${primaries.join(", ")}`);
   }
   // The run with two more looks is listed once its lines have loaded.
-  await see(home.getByRole("link", { name: "With two more looks" }), "the two-more-looks link");
+  await see(home.getByRole("link", { name: "With two more scans" }), "the two-more-looks link");
   for (const [door, names] of HOME_LINKS) {
     const section = home.getByRole("region", { name: door, exact: true });
     await see(section, `the landing page's ${door}`);
@@ -1327,7 +1327,7 @@ async function coldLoad(page, shoot) {
   await tourCard.getByRole("button", { name: "Next" }).click();
   const without = page
     .getByRole("group", { name: "Run" })
-    .getByRole("button", { name: "Without the look", pressed: true });
+    .getByRole("button", { name: "Without the scan", pressed: true });
   try {
     await without.waitFor({ timeout: COLD_LOAD_S * 1000 });
   } catch {
@@ -1356,7 +1356,7 @@ async function quickTour(page, shoot) {
       () =>
         see(
           page.getByRole("group", { name: "Run" }).getByRole("button", {
-            name: "Without the look",
+            name: "Without the scan",
             pressed: true,
           }),
           "the run without the look",

@@ -289,7 +289,7 @@ export function lookSession(
         run: entry.after,
         answers: {},
         errors: [],
-        tag: `${entry.look ? "your look" : "no look"}: ${lowerFirst(callLabel(entry.decision.chosen))}`,
+        tag: `${entry.look ? "your scan" : "no scan"}: ${lowerFirst(callLabel(entry.decision.chosen))}`,
       },
     ],
   };

@@ -62,7 +62,7 @@ const STATES = [
     name: "home",
     path: "",
     ready: (p) =>
-      see(p.getByRole("region", { name: /^One look over his shoulder/ }), "the landing page"),
+      see(p.getByRole("region", { name: /^One scan over his shoulder/ }), "the landing page"),
   },
   { name: "hero", path: "?intro=0&autoplay=0", ready: runSwitch },
   {

@@ -258,7 +258,7 @@ function Timeline() {
               strokeWidth={1.5}
               strokeDasharray="3 3"
             >
-              <title>Removed look</title>
+              <title>Removed scan</title>
             </rect>
           )}
           {marked && (
@@ -328,11 +328,11 @@ function Timeline() {
               onClick={() => controls.seek(Math.max(0, key.start - 8))}
               title={
                 removed
-                  ? "Jump to just before the look this run leaves out"
+                  ? "Jump to just before the scan this run leaves out"
                   : "Jump to just before the key scan"
               }
             >
-              {removed ? "Removed look" : "Key scan"}
+              {removed ? "Removed scan" : "Key scan"}
             </button>
           )}
           <button

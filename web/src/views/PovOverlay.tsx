@@ -76,7 +76,7 @@ export function Hud({ readout = true }: { readout?: boolean }) {
       {scan && (
         <span className={scan.key ? "badge key" : "badge"}>{scan.key ? "KEY SCAN" : "SCAN"}</span>
       )}
-      {droppedLook && <span className="badge cf">removed look</span>}
+      {droppedLook && <span className="badge cf">removed scan</span>}
       {blind.map((a) => (
         <span key={a.target} className="blind-hud">
           <span className="badge blind">BLIND SIDE</span> {shortName(hero.ids[a.target])}{" "}

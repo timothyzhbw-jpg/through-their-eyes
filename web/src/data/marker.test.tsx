@@ -112,13 +112,13 @@ describe("a marker's look", () => {
     );
     expect(html).toContain("+0.10"); // at the claim's precision (cf_value: 2 decimals)
     expect(html).toContain("scan lens");
-    expect(runLabels(hero).gain).toBe("Worth of the look to his side");
+    expect(runLabels(hero).gain).toBe("Worth of the scan to his side");
   });
 
   it("has its own headline, blurb and label", () => {
-    expect(momentTitle(hero)).toEqual(["One look kept him", "with his man."]);
+    expect(momentTitle(hero)).toEqual(["One scan kept him", "with his man."]);
     const same = parseHero({ ...raw, runs: { ...raw.runs, counterfactual: raw.runs.factual } });
-    expect(momentTitle(same)).toEqual(["One look, and", "the same outcome."]);
+    expect(momentTitle(same)).toEqual(["One scan, and", "the same outcome."]);
     expect(blurbOf(hero)).toMatch(/short corner/);
     expect(blurbOf(hero)).not.toMatch(/A hero moment:/);
     expect(scenarioLabel("corner_blind_side")).toBe("The corner");

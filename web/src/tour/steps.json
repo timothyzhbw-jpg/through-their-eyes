@@ -169,7 +169,7 @@
     {
       "id": "remove",
       "title": "Now remove it",
-      "caption": "The same seconds, re-simulated {cf}. Same seed, same players: that one look is the only change.",
+      "caption": "The same seconds, re-simulated {cf}. Same seed, same players: that one scan is the only change.",
       "target": ".stage-run",
       "dim": false,
       "door": "look",
@@ -181,7 +181,7 @@
     {
       "id": "compare",
       "title": "Compare the outcomes",
-      "caption": "From above: where his pass went with the look, and the dashed gold path where it would have gone without it.",
+      "caption": "From above: where his pass went with the scan, and the dashed gold path where it would have gone without it.",
       "target": null,
       "dim": false,
       "door": "look",

@@ -224,9 +224,9 @@ function lookFacts(hero: Hero, rawSteps: unknown, rawWithout: unknown): MomentFa
     const lines = verifiedLines(without.data.answers.en);
     const c = card(
       `stat:without:${hero.heroId}`,
-      "WITHOUT THE LOOK",
+      "WITHOUT THE SCAN",
       name,
-      "the look the sim took away",
+      "the scan the sim took away",
       pick(lines, ["removed_look", "look_cost"]),
       "without_look_seed3.json",
     );
