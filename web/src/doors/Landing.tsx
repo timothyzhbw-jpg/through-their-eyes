@@ -7,7 +7,7 @@
 // in place); then the evidence in one line and the demo-data note. Nothing here asks the service
 // for anything: the live picture waits behind The look.
 
-import type { MouseEvent, ReactNode } from "react";
+import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { drillOf } from "../drill/controller";
 import { JOURNEY_STEPS, STEP_MARK, STEP_TITLE, type JourneyStep } from "../journey/steps";
 import { openStep } from "../journey/state";
@@ -19,7 +19,7 @@ import { useStore } from "../store/store";
 import { prefersReducedMotion, takeEyesOf } from "../takeeyes/controller";
 import { envOf, quickTourFits } from "../tour/steps";
 import { startTour } from "../tour/tourState";
-import { ArrowIcon, CheckIcon, PlayIcon } from "../ui/icons";
+import { ArrowIcon, CheckIcon, PauseIcon, PlayIcon } from "../ui/icons";
 import { hookOf, PITCH } from "../ui/IntroCard";
 import { extraLooksOf } from "../without/extra";
 import { useHeroGate } from "../without/WithoutLook";
@@ -107,15 +107,25 @@ export function Landing() {
 }
 
 /** The product on the first screen: the live app in first person through the key scan, looping
- * and muted (a still under reduced motion). It opens the same story as the primary button. */
+ * and muted (a still under reduced motion), with its own pause (WCAG 2.2.2: it loops past 5 s).
+ * The picture opens the same story as the primary button. */
 function HomeShot({ label, watch }: { label: string; watch: () => void }) {
-  const still = prefersReducedMotion();
+  const [still] = useState(prefersReducedMotion);
+  const [playing, setPlaying] = useState(!still);
+  const video = useRef<HTMLVideoElement | null>(null);
+  const toggle = () => {
+    const el = video.current;
+    if (!el) return;
+    if (playing) el.pause();
+    else void el.play().catch(() => {});
+    setPlaying(!playing);
+  };
   return (
     <figure className="home-shot">
       <a
         className="home-shot-link"
         href={href(HOME_LINKS.story)}
-        aria-label={`${label}: the live app through his eyes`}
+        aria-label={`Live app · his eyes at the key scan. ${label}`}
         onClick={(e: MouseEvent<HTMLAnchorElement>) => {
           if (!plainClick(e)) return;
           e.preventDefault();
@@ -135,6 +145,7 @@ function HomeShot({ label, watch }: { label: string; watch: () => void }) {
           aria-hidden="true"
           // React sets muted as a property only; Safari wants the attribute before it autoplays.
           ref={(el) => {
+            video.current = el;
             if (!el) return;
             el.muted = true;
             el.setAttribute("muted", "");
@@ -144,6 +155,17 @@ function HomeShot({ label, watch }: { label: string; watch: () => void }) {
           <PlayIcon /> Live app · his eyes at the key scan
         </span>
       </a>
+      {!still && (
+        <button
+          type="button"
+          className="home-shot-pause"
+          aria-label={playing ? "Pause the loop" : "Play the loop"}
+          aria-pressed={!playing}
+          onClick={toggle}
+        >
+          {playing ? <PauseIcon /> : <PlayIcon />}
+        </button>
+      )}
       <figcaption className="home-shot-caption">
         Recorded from the live app: his look over the shoulder before the ball arrives. The caption
         is a checked line (✓).

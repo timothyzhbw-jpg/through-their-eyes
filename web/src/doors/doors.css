@@ -190,6 +190,7 @@
   font-size: clamp(44px, 4.4vw, 76px);
 }
 .home-shot {
+  position: relative;
   margin: 0;
   min-width: 0;
 }
@@ -217,7 +218,7 @@
 .home-shot-tag {
   position: absolute;
   top: 14px;
-  right: 14px; /* the sky: clear of the app's own caption and timeline at the bottom */
+  right: 54px; /* the sky, beside the pause: clear of the app's own tags and timeline */
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -231,6 +232,33 @@
 .home-shot-link:hover .home-shot-tag {
   background: var(--floodlight);
   color: #14130f;
+}
+.home-shot-pause {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(10, 12, 11, 0.78);
+  color: var(--chalk);
+  cursor: pointer;
+}
+.home-shot-pause:hover {
+  background: var(--floodlight);
+  color: #14130f;
+}
+.home-shot-pause:focus-visible {
+  outline: 2px solid var(--floodlight);
+  outline-offset: 2px;
+}
+.home-shot-pause svg {
+  width: 14px;
+  height: 14px;
 }
 .home-shot-caption {
   margin: 12px 2px 0;

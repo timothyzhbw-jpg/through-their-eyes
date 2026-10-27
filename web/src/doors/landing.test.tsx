@@ -228,13 +228,34 @@ describe("the product beside the promise", () => {
     );
   });
 
-  it("stays a still under reduced motion", () => {
+  it("stays a still under reduced motion, with nothing to pause", () => {
     motion(true);
     const page = mount(offline());
     const video = page.querySelector<HTMLVideoElement>(".home-shot video")!;
     expect(video.autoplay).toBe(false);
     expect(video.getAttribute("preload")).toBe("none");
     expect(video.getAttribute("poster")).toBe(HOME_SHOT.poster);
+    expect(page.querySelector(".home-shot-pause")).toBeNull();
+  });
+
+  it("pauses and plays again from its own button, outside the link (WCAG 2.2.2)", () => {
+    motion(false);
+    const page = mount(offline());
+    const video = page.querySelector<HTMLVideoElement>(".home-shot video")!;
+    const pause = vi.spyOn(video, "pause").mockImplementation(() => {});
+    const play = vi.spyOn(video, "play").mockImplementation(() => Promise.resolve());
+    const button = page.querySelector<HTMLButtonElement>("button.home-shot-pause")!;
+    expect(button.closest("a")).toBeNull();
+    expect(button.getAttribute("aria-label")).toBe("Pause the loop");
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+    act(() => button.click());
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(button.getAttribute("aria-label")).toBe("Play the loop");
+    expect(button.getAttribute("aria-pressed")).toBe("true");
+    act(() => button.click());
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(button.getAttribute("aria-label")).toBe("Pause the loop");
+    expect(doors.get().door).toBe("home"); // the pause never opens the story
   });
 
   it("opens the same story as the primary button, and leaves a modified click to the browser", () => {
@@ -242,8 +263,9 @@ describe("the product beside the promise", () => {
     const page = mount(offline());
     const shot = page.querySelector<HTMLAnchorElement>("a.home-shot-link")!;
     expect(shot.getAttribute("href")).toBe("/?tour=quick");
+    // The visible tag starts its name (WCAG 2.5.3), then what it does.
     expect(shot.getAttribute("aria-label")).toBe(
-      "Watch the look (60 s): the live app through his eyes",
+      "Live app · his eyes at the key scan. Watch the look (60 s)",
     );
     const modified = new MouseEvent("click", { bubbles: true, cancelable: true, metaKey: true });
     act(() => {
