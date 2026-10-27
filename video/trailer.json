@@ -1370,7 +1370,7 @@
       "params": {
         "name": "H8",
         "role": "THE MIDFIELDER",
-        "sub": "A SINGLE LOOK. THAT'S ALL HE GETS.",
+        "sub": "A SINGLE SCAN. THAT'S ALL HE GETS.",
         "spot": {
           "x": 1305,
           "y": 560,
@@ -1832,7 +1832,13 @@
       "alpha": true,
       "params": {
         "kicker": "GET YOUR VISION",
-        "lines": [{ "text": "SCAN · NEW INFORMATION · NEW OPTIONS", "color": "gold", "size": 76 }],
+        "lines": [
+          {
+            "text": "SCAN · NEW INFORMATION · NEW OPTIONS",
+            "color": "gold",
+            "size": 76
+          }
+        ],
         "align": "lower-left",
         "backdrop": true
       }
@@ -1843,7 +1849,13 @@
       "alpha": true,
       "params": {
         "kicker": "GET YOUR VISION",
-        "lines": [{ "text": "DECISION · EXECUTE · SIDE-ON", "color": "gold", "size": 82 }],
+        "lines": [
+          {
+            "text": "DECISION · EXECUTE · SIDE-ON",
+            "color": "gold",
+            "size": 82
+          }
+        ],
         "align": "lower-left",
         "backdrop": true
       }
@@ -1854,7 +1866,13 @@
       "alpha": true,
       "params": {
         "kicker": "GET YOUR VISION",
-        "lines": [{ "text": "WITHOUT THAT LOOK…", "color": "dusk", "size": 120 }],
+        "lines": [
+          {
+            "text": "WITHOUT THAT SCAN…",
+            "color": "dusk",
+            "size": 120
+          }
+        ],
         "align": "lower-left",
         "backdrop": true
       }
@@ -1866,8 +1884,15 @@
       "params": {
         "kicker": "GET YOUR VISION",
         "lines": [
-          { "text": "WITH MORE LOOKS", "size": 92 },
-          { "text": "{extra_result.k} OF {extra_result.n} DECISIONS CHANGE", "color": "gold", "size": 62 }
+          {
+            "text": "WITH MORE LOOKS",
+            "size": 92
+          },
+          {
+            "text": "{extra_result.k} OF {extra_result.n} DECISIONS CHANGE",
+            "color": "gold",
+            "size": 62
+          }
         ],
         "align": "lower-left",
         "stagger": 0.25,
@@ -1876,8 +1901,15 @@
       "fallback": {
         "kicker": "GET YOUR VISION",
         "lines": [
-          { "text": "WITH MORE LOOKS", "size": 92 },
-          { "text": "THE RIGHT LOOK, NOT MORE LOOKS", "color": "gold", "size": 62 }
+          {
+            "text": "WITH MORE LOOKS",
+            "size": 92
+          },
+          {
+            "text": "THE RIGHT LOOK, NOT MORE LOOKS",
+            "color": "gold",
+            "size": 62
+          }
         ],
         "align": "lower-left",
         "stagger": 0.25,
@@ -1891,8 +1923,15 @@
       "params": {
         "kicker": "GET YOUR VISION",
         "lines": [
-          { "text": "LEFT LOOK → DROP BACK", "size": 78 },
-          { "text": "RIGHT LOOK → SIDE-ON", "color": "gold", "size": 78 }
+          {
+            "text": "LEFT LOOK → DROP BACK",
+            "size": 78
+          },
+          {
+            "text": "RIGHT LOOK → SIDE-ON",
+            "color": "gold",
+            "size": 78
+          }
         ],
         "align": "lower-left",
         "stagger": 0.25,
@@ -1905,7 +1944,13 @@
       "alpha": true,
       "params": {
         "kicker": "GET YOUR VISION",
-        "lines": [{ "text": "PRESS-BREAKING", "color": "gold", "size": 100 }],
+        "lines": [
+          {
+            "text": "PRESS-BREAKING",
+            "color": "gold",
+            "size": 100
+          }
+        ],
         "align": "lower-left",
         "backdrop": true
       }
@@ -1916,7 +1961,13 @@
       "alpha": true,
       "params": {
         "kicker": "GET YOUR VISION",
-        "lines": [{ "text": "TRANSITION", "color": "gold", "size": 110 }],
+        "lines": [
+          {
+            "text": "TRANSITION",
+            "color": "gold",
+            "size": 110
+          }
+        ],
         "align": "lower-left",
         "backdrop": true
       }
@@ -1928,8 +1979,15 @@
       "params": {
         "kicker": "GET YOUR VISION",
         "lines": [
-          { "text": "TACTICS · PLAIN / PRO", "size": 90 },
-          { "text": "COUNTER-ATTACK", "color": "gold", "size": 90 }
+          {
+            "text": "TACTICS · PLAIN / PRO",
+            "size": 90
+          },
+          {
+            "text": "COUNTER-ATTACK",
+            "color": "gold",
+            "size": 90
+          }
         ],
         "align": "lower-left",
         "stagger": 0.25,
@@ -1942,7 +2000,12 @@
       "alpha": true,
       "params": {
         "kicker": "GET YOUR VISION",
-        "lines": [{ "text": "THE LOOK · YOUR TURN · FOR STUDIOS", "size": 72 }],
+        "lines": [
+          {
+            "text": "THE LOOK · YOUR TURN · FOR STUDIOS",
+            "size": 72
+          }
+        ],
         "align": "lower-left",
         "backdrop": true
       }
@@ -1953,7 +2016,13 @@
       "alpha": true,
       "params": {
         "kicker": "GET YOUR VISION",
-        "lines": [{ "text": "YOUR TURN", "color": "gold", "size": 120 }],
+        "lines": [
+          {
+            "text": "YOUR TURN",
+            "color": "gold",
+            "size": 120
+          }
+        ],
         "align": "lower-left",
         "backdrop": true
       }
@@ -1964,7 +2033,13 @@
       "alpha": true,
       "params": {
         "kicker": "GET YOUR VISION",
-        "lines": [{ "text": "HE SAW THE RUN. WOULD YOU?", "color": "gold", "size": 82 }],
+        "lines": [
+          {
+            "text": "HE SAW THE RUN. WOULD YOU?",
+            "color": "gold",
+            "size": 82
+          }
+        ],
         "align": "lower-left",
         "backdrop": true
       }
@@ -1975,7 +2050,13 @@
       "alpha": true,
       "params": {
         "kicker": "GET YOUR VISION",
-        "lines": [{ "text": "A · AI TACTICAL BROADCAST", "color": "gold", "size": 82 }],
+        "lines": [
+          {
+            "text": "A · AI TACTICAL BROADCAST",
+            "color": "gold",
+            "size": 82
+          }
+        ],
         "align": "lower-left",
         "backdrop": true
       }
@@ -1987,8 +2068,15 @@
       "params": {
         "kicker": "GET YOUR VISION",
         "lines": [
-          { "text": "B · PERSONALISED COMMENTARY · 中文", "size": 68 },
-          { "text": "xT / 预期威胁", "color": "gold", "size": 68 }
+          {
+            "text": "B · PERSONALISED COMMENTARY · 中文",
+            "size": 68
+          },
+          {
+            "text": "xT / 预期威胁",
+            "color": "gold",
+            "size": 68
+          }
         ],
         "align": "lower-left",
         "stagger": 0.2,
@@ -2002,8 +2090,15 @@
       "params": {
         "kicker": "GET YOUR VISION",
         "lines": [
-          { "text": "C · AUTOMATED HIGHLIGHTS", "size": 76 },
-          { "text": "SOCIAL REACH", "color": "gold", "size": 76 }
+          {
+            "text": "C · AUTOMATED HIGHLIGHTS",
+            "size": 76
+          },
+          {
+            "text": "SOCIAL REACH",
+            "color": "gold",
+            "size": 76
+          }
         ],
         "align": "lower-left",
         "stagger": 0.2,
@@ -2016,7 +2111,13 @@
       "alpha": true,
       "params": {
         "kicker": "GET YOUR VISION",
-        "lines": [{ "text": "D · STADIUM SCREENS", "color": "gold", "size": 86 }],
+        "lines": [
+          {
+            "text": "D · STADIUM SCREENS",
+            "color": "gold",
+            "size": 86
+          }
+        ],
         "align": "lower-left",
         "backdrop": true
       }
@@ -2028,8 +2129,15 @@
       "params": {
         "kicker": "GET YOUR VISION",
         "lines": [
-          { "text": "VALUE · LEAGUE REVENUE LEVERS", "size": 68 },
-          { "text": "DEMO DATA: SIMULATED AUDIENCE, NOT REAL RESULTS", "color": "gold", "size": 46 }
+          {
+            "text": "VALUE · LEAGUE REVENUE LEVERS",
+            "size": 68
+          },
+          {
+            "text": "DEMO DATA: SIMULATED AUDIENCE, NOT REAL RESULTS",
+            "color": "gold",
+            "size": 46
+          }
         ],
         "align": "lower-left",
         "stagger": 0.2,
@@ -2042,9 +2150,108 @@
       "alpha": true,
       "params": {
         "kicker": "GET YOUR VISION",
-        "lines": [{ "text": "EVERY LINE CHECKED BEFORE IT AIRS", "color": "gold", "size": 76 }],
+        "lines": [
+          {
+            "text": "EVERY LINE CHECKED BEFORE IT AIRS",
+            "color": "gold",
+            "size": 76
+          }
+        ],
         "align": "lower-left",
         "backdrop": true
+      }
+    },
+    "card-costs": {
+      "template": "card",
+      "dur": 1.4,
+      "alpha": false,
+      "params": {
+        "kicker": "GET YOUR VISION",
+        "lines": [
+          {
+            "text": "IN A MATCH,"
+          },
+          {
+            "text": "IT COSTS MORE.",
+            "color": "gold"
+          }
+        ],
+        "stagger": 0.5
+      }
+    },
+    "case-chance": {
+      "template": "slam",
+      "dur": 2.8,
+      "alpha": true,
+      "params": {
+        "kicker": "WITHOUT THE SCAN",
+        "lines": [
+          {
+            "text": "THE CHANCE IS GONE",
+            "color": "gold",
+            "size": 92
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "pain-replay": {
+      "template": "slam",
+      "dur": 1.3,
+      "alpha": true,
+      "params": {
+        "kicker": "THE PROBLEM",
+        "lines": [
+          {
+            "text": "NO REPLAY SHOWS WHAT HE SAW",
+            "size": 80
+          }
+        ],
+        "align": "lower-left",
+        "backdrop": true
+      }
+    },
+    "card-pain": {
+      "template": "card",
+      "dur": 6.4,
+      "alpha": false,
+      "params": {
+        "kicker": "THE PROBLEM",
+        "lines": [
+          {
+            "text": "NO TOOL CAN RE-RUN"
+          },
+          {
+            "text": "WHAT ALREADY HAPPENED."
+          },
+          {
+            "text": "NO FEEDBACK ON THE DECISION.",
+            "color": "gold"
+          }
+        ],
+        "stagger": 1.6
+      }
+    },
+    "card-product": {
+      "template": "card",
+      "dur": 8.8,
+      "alpha": false,
+      "params": {
+        "kicker": "THROUGH THEIR EYES",
+        "lines": [
+          {
+            "text": "SEE WHAT HE SAW."
+          },
+          {
+            "text": "RE-RUN THE MOMENT."
+          },
+          {
+            "text": "FEEDBACK ON EVERY DECISION.",
+            "color": "gold"
+          }
+        ],
+        "stagger": 2.4
       }
     }
   },
@@ -2250,28 +2457,62 @@
       "id": "b01-app-s1-pov",
       "story": "app",
       "dur": 2.733,
-      "picture": { "src": "cine", "id": "press-pov-cf", "in": 0 },
+      "picture": {
+        "src": "cine",
+        "id": "press-pov-cf",
+        "in": 0
+      },
       "letterbox": 2.39,
-      "fx": ["glue"],
-      "freeze": { "at": 1.5 },
+      "fx": [
+        "glue"
+      ],
+      "freeze": {
+        "at": 1.5
+      },
       "overlays": [
-        { "title": "tag-his-eyes", "at": 0.05 },
-        { "title": "nc-you-app", "at": 1.5 },
-        { "title": "label-ie-2p733", "at": 0 }
+        {
+          "title": "tag-his-eyes",
+          "at": 0.05
+        },
+        {
+          "title": "nc-you-app",
+          "at": 1.5
+        },
+        {
+          "title": "label-ie-2p733",
+          "at": 0
+        }
       ],
       "section": "open",
       "vo": [
-        { "id": "vk1", "at": 0.15, "speaker": "kid", "text": "Give it to me!", "style": "shouting" }
+        {
+          "id": "vk1",
+          "at": 0.15,
+          "speaker": "kid",
+          "text": "Give it to me!",
+          "style": "shouting"
+        }
       ]
     },
     {
       "id": "b02-app-s1-tackle",
       "story": "app",
       "dur": 1.833,
-      "picture": { "src": "cine", "id": "press-cf", "in": 1.1 },
+      "picture": {
+        "src": "cine",
+        "id": "press-cf",
+        "in": 1.1
+      },
       "letterbox": 2.39,
-      "fx": ["glue"],
-      "overlays": [{ "title": "label-ie-1p833", "at": 0 }],
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-1p833",
+          "at": 0
+        }
+      ],
       "section": "open",
       "vo": [
         {
@@ -2287,7 +2528,10 @@
       "story": "app",
       "section": "open",
       "dur": 2.5,
-      "picture": { "src": "title", "id": "card-watched" },
+      "picture": {
+        "src": "title",
+        "id": "card-watched"
+      },
       "sfx": []
     },
     {
@@ -2295,7 +2539,11 @@
       "story": "app",
       "section": "open",
       "dur": 2.8,
-      "picture": { "src": "capture", "shot": "22-board-blind", "in": 0.2 },
+      "picture": {
+        "src": "capture",
+        "shot": "22-board-blind",
+        "in": 0.2
+      },
       "vo": [
         {
           "id": "vc2",
@@ -2305,11 +2553,128 @@
         }
       ],
       "sfx": [],
-      "overlays": [{ "title": "saw-believed", "at": 1.4 }]
+      "overlays": [
+        {
+          "title": "saw-believed",
+          "at": 1.4
+        }
+      ]
+    },
+    {
+      "id": "b05ba-card-costs",
+      "dur": 1.4,
+      "picture": {
+        "src": "title",
+        "id": "card-costs"
+      },
+      "sfx": []
+    },
+    {
+      "id": "b05bb-case-without",
+      "dur": 3.5,
+      "picture": {
+        "src": "clip",
+        "path": "out/video/blender/bl03_without.mp4",
+        "in": 0,
+        "fit": "pad"
+      },
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "case-chance",
+          "at": 0.1
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo44",
+          "at": 0.15,
+          "text": "Without that scan, he plays it safe, and the chance is gone."
+        }
+      ],
+      "sfx": [],
+      "freeze": {
+        "at": 2.4
+      }
+    },
+    {
+      "id": "b05bc-a1-pov",
+      "dur": 3,
+      "picture": {
+        "src": "cine",
+        "id": "pov-match",
+        "in": 2
+      },
+      "vo": [
+        {
+          "id": "vo01",
+          "at": 0.15,
+          "text": "Replays show where the ball went…",
+          "style": "whispering",
+          "degree": 1
+        },
+        {
+          "id": "vo02",
+          "at": 1.75,
+          "text": "never what the player saw.",
+          "style": "whispering",
+          "degree": 1
+        }
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-3p0",
+          "at": 0
+        },
+        {
+          "title": "pain-replay",
+          "at": 1.6
+        }
+      ],
+      "sfx": [],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ]
+    },
+    {
+      "id": "b05bd-card-pain",
+      "dur": 6.4,
+      "picture": {
+        "src": "title",
+        "id": "card-pain"
+      },
+      "vo": [
+        {
+          "id": "vo41",
+          "at": 0.2,
+          "text": "No tool can re-run a moment that already happened, so a player never gets exact feedback on the decision he made."
+        }
+      ],
+      "sfx": []
+    },
+    {
+      "id": "b05be-card-product",
+      "dur": 8.8,
+      "picture": {
+        "src": "title",
+        "id": "card-product"
+      },
+      "vo": [
+        {
+          "id": "vo42",
+          "at": 0.3,
+          "text": "Through Their Eyes shows what the player saw and what he believed. Remove a scan, and it re-runs the moment, so every decision gets real feedback."
+        }
+      ],
+      "sfx": []
     },
     {
       "id": "b05c-board",
-      "dur": 1.2,
+      "dur": 1.7,
       "picture": {
         "src": "capture",
         "shot": "22-board-blind",
@@ -2319,7 +2684,14 @@
           1.1
         ]
       },
-      "sfx": []
+      "sfx": [],
+      "vo": [
+        {
+          "id": "vo43",
+          "at": 0.1,
+          "text": "Let's replay that moment."
+        }
+      ]
     },
     {
       "id": "b05d-card-vision",
@@ -2337,46 +2709,6 @@
         }
       ],
       "sfx": []
-    },
-    {
-      "id": "b06-a1-pov",
-      "dur": 3,
-      "picture": {
-        "src": "cine",
-        "id": "pov-match",
-        "in": 2
-      },
-      "vo": [
-        {
-          "id": "vo01",
-          "at": 0.15,
-          "text": "Replays show where the ball went…",
-          "style": "whispering",
-          "degree": 1
-        },
-        {
-          "id": "vo02",
-          "at": 1.85,
-          "text": "never what the player saw.",
-          "style": "whispering",
-          "degree": 1
-        }
-      ],
-      "overlays": [
-        {
-          "title": "studio",
-          "at": 1.7
-        },
-        {
-          "title": "label-ie-3p0",
-          "at": 0
-        }
-      ],
-      "sfx": [],
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ]
     },
     {
       "id": "b08-bl01a",
@@ -2443,7 +2775,7 @@
         {
           "id": "vo31",
           "at": 0,
-          "text": "He gets a single look."
+          "text": "A single scan."
         },
         {
           "id": "vo32",
@@ -2562,7 +2894,7 @@
     },
     {
       "id": "b14-pov-look",
-      "dur": 2.6,
+      "dur": 2.8,
       "picture": {
         "src": "cine",
         "id": "pov-look",
@@ -2575,7 +2907,7 @@
       "vo": [
         {
           "id": "vo03",
-          "at": 0.4,
+          "at": 0.1,
           "text": "A look over his shoulder, and he finds the runner."
         }
       ],
@@ -2589,24 +2921,42 @@
     },
     {
       "id": "b14a-st-scan",
-      "dur": 2.4,
+      "dur": 2.9,
       "picture": {
         "src": "capture",
         "shot": "20-steps",
         "in": 0,
-        "push": [1, 1.03]
+        "push": [
+          1,
+          1.03
+        ]
       },
-      "overlays": [{ "title": "v16-scan", "at": 0.05 }],
+      "overlays": [
+        {
+          "title": "v16-scan",
+          "at": 0.05
+        }
+      ],
       "vo": [
         {
           "id": "vo03b",
           "at": 0.15,
-          "text": "Every look shows him something new — and new options."
+          "text": "Every scan shows him something new — and new options."
         }
       ],
-      "sfx": [{ "name": "shutter", "at": 0.05, "gain_db": -6 }],
-      "fx": ["lift"],
-      "out": { "type": "cut" }
+      "sfx": [
+        {
+          "name": "shutter",
+          "at": 0.05,
+          "gain_db": -6
+        }
+      ],
+      "fx": [
+        "lift"
+      ],
+      "out": {
+        "type": "cut"
+      }
     },
     {
       "id": "b14b-st-decision",
@@ -2615,9 +2965,17 @@
         "src": "capture",
         "shot": "20-steps",
         "in": 3.1,
-        "push": [1, 1.03]
+        "push": [
+          1,
+          1.03
+        ]
       },
-      "overlays": [{ "title": "v16-decision", "at": 0.05 }],
+      "overlays": [
+        {
+          "title": "v16-decision",
+          "at": 0.05
+        }
+      ],
       "vo": [
         {
           "id": "vo04",
@@ -2625,9 +2983,19 @@
           "text": "And he knows where his man is."
         }
       ],
-      "sfx": [{ "name": "stamp", "at": 0.05, "gain_db": -7 }],
-      "fx": ["lift"],
-      "out": { "type": "cut" }
+      "sfx": [
+        {
+          "name": "stamp",
+          "at": 0.05,
+          "gain_db": -7
+        }
+      ],
+      "fx": [
+        "lift"
+      ],
+      "out": {
+        "type": "cut"
+      }
     },
     {
       "id": "b16-toggle",
@@ -2637,15 +3005,23 @@
         "shot": "04-with-without",
         "in": 0.4,
         "crop": "tactical",
-        "push": [1, 1.05],
+        "push": [
+          1,
+          1.05
+        ],
         "fit": "contain"
       },
-      "overlays": [{ "title": "v16-without", "at": 0.7 }],
+      "overlays": [
+        {
+          "title": "v16-without",
+          "at": 0.7
+        }
+      ],
       "vo": [
         {
           "id": "vo05",
           "at": 0.3,
-          "text": "Take that look away, and re-run the match."
+          "text": "Take that scan away, and re-run the match."
         }
       ],
       "sfx": [],
@@ -2744,37 +3120,23 @@
       }
     },
     {
-      "id": "b20-extra-looks",
-      "dur": 2.6,
-      "picture": {
-        "src": "capture",
-        "shot": "26-extra-looks",
-        "in": 0,
-        "push": [1, 1.03]
-      },
-      "overlays": [{ "title": "v16-extra", "at": 0.05 }],
-      "vo": [
-        {
-          "id": "vo05b",
-          "at": 0.1,
-          "text": "With the extra looks, {extra_result.k} of {extra_result.n} decisions change.",
-          "fallback": "With the extra looks, his decision does not change. It's the right look, not more looks."
-        }
-      ],
-      "sfx": [],
-      "fx": ["lift"],
-      "out": { "type": "cut" }
-    },
-    {
       "id": "b21-drill-coach",
-      "dur": 2.6,
+      "dur": 5.0,
       "picture": {
         "src": "capture",
         "shot": "27-drill-coach",
         "in": 0,
-        "push": [1, 1.03]
+        "push": [
+          1,
+          1.03
+        ]
       },
-      "overlays": [{ "title": "v16-drill", "at": 0.05 }],
+      "overlays": [
+        {
+          "title": "v16-drill",
+          "at": 0.05
+        }
+      ],
       "vo": [
         {
           "id": "vc4",
@@ -2784,229 +3146,111 @@
         }
       ],
       "sfx": [],
-      "fx": ["lift"],
-      "out": { "type": "cut" }
-    },
-    {
-      "id": "b27-press-a",
-      "dur": 1.3,
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl04a_press.mp4",
-        "in": 0.5,
-        "fit": "pad"
-      },
-      "grade": "night",
-      "letterbox": 2.39,
       "fx": [
-        "glue"
-      ],
-      "overlays": [
-        { "title": "v16-press", "at": 0.05 },
-        { "title": "label-bl-1p3", "at": 0 }
-      ],
-      "vo": [
-        {
-          "id": "vo24",
-          "at": 0.1,
-          "text": "Under a high press…"
-        }
-      ]
-    },
-    {
-      "id": "b28-press-b",
-      "dur": 1.8,
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl04b_escape.mp4",
-        "in": 0.5,
-        "fit": "pad"
-      },
-      "grade": "night",
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-bl-1p8",
-          "at": 0
-        }
-      ],
-      "vo": [],
-      "sfx": [
-        {
-          "name": "touch",
-          "at": 0.7,
-          "gain_db": -4
-        }
-      ]
-    },
-    {
-      "id": "b29-press-cf",
-      "dur": 3,
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl05_press_cf.mp4",
-        "in": 0.5,
-        "fit": "pad"
-      },
-      "grade": "danger",
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "freeze": {
-        "at": 2
-      },
-      "overlays": [
-        {
-          "title": "if-kept",
-          "at": 0.05
-        },
-        {
-          "title": "press-wins",
-          "at": 2
-        },
-        {
-          "title": "label-bl-3",
-          "at": 0
-        }
-      ],
-      "vo": [
-        {
-          "id": "vo25",
-          "at": 0.15,
-          "text": "make him keep the ball, and the press wins it."
-        }
-      ],
-      "sfx": [
-        {
-          "name": "touch",
-          "at": 1.9,
-          "gain_db": -4
-        }
+        "lift"
       ],
       "out": {
         "type": "cut"
       }
     },
     {
-      "id": "b31-corner-a",
-      "dur": 1.2,
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl06a_corner.mp4",
-        "in": 0.5,
-        "fit": "pad"
-      },
-      "vo": [
-        {
-          "id": "vo34",
-          "at": 0.1,
-          "text": "At a corner, it's the marker who has to look."
-        }
-      ],
-      "fx": ["glue"],
-      "letterbox": 2.39,
-      "overlays": [
-        { "title": "v16-transition", "at": 0.05 },
-        { "title": "label-bl-1p5", "at": 0 }
-      ]
-    },
-    {
-      "id": "b32a-corner-look",
-      "dur": 0.9,
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl06b_look.mp4",
-        "in": 0.5,
-        "fit": "pad"
-      },
-      "fx": ["glue"],
-      "overlays": [{ "title": "label-bl-0p9", "at": 0 }],
-      "letterbox": 2.39
-    },
-    {
-      "id": "b32c-tactics",
-      "dur": 2.8,
-      "picture": {
-        "src": "capture",
-        "shot": "28-tactics",
-        "in": 0,
-        "push": [1, 1.03]
-      },
-      "overlays": [{ "title": "v16-tactics", "at": 0.05 }],
-      "vo": [
-        {
-          "id": "vo35",
-          "at": 0.1,
-          "text": "Plain words for the fan. Pro for the coach. Counter-attack, press-breaking, transition."
-        }
-      ],
-      "sfx": [],
-      "fx": ["lift"],
-      "out": { "type": "cut" }
-    },
-    {
-      "id": "b32d-doors",
-      "dur": 2.6,
-      "picture": {
-        "src": "capture",
-        "shot": "24-doors",
-        "in": 0,
-        "push": [1, 1.02]
-      },
-      "overlays": [{ "title": "v16-doors", "at": 0.05 }],
-      "vo": [{ "id": "vo36", "at": 0.15, "text": "Every door. A single studio." }],
-      "sfx": [],
-      "fx": ["lift"],
-      "out": { "type": "cut" }
-    },
-    {
       "id": "b32f-yc-decide",
-      "dur": 2.4,
+      "dur": 2.6,
       "picture": {
         "src": "capture",
         "shot": "12-your-call",
         "in": 0,
-        "push": [1, 1.04],
-        "crop": [700, 40, 1220, 686]
+        "push": [
+          1,
+          1.04
+        ],
+        "crop": [
+          700,
+          40,
+          1220,
+          686
+        ]
       },
-      "overlays": [{ "title": "v16-yourturn", "at": 0.05 }],
+      "overlays": [
+        {
+          "title": "v16-yourturn",
+          "at": 0.05
+        }
+      ],
       "vo": [
-        { "id": "vo20", "at": 0.1, "text": "Your call." },
-        { "id": "vo21", "at": 1.0, "text": "You only know what he knew." }
+        {
+          "id": "vo20",
+          "at": 0.1,
+          "text": "Your call."
+        },
+        {
+          "id": "vo21",
+          "at": 1.0,
+          "text": "You only know what he knew."
+        }
       ],
       "sfx": [],
-      "fx": ["lift"]
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b32g-yc-truth",
-      "dur": 2,
+      "dur": 2.7,
       "picture": {
         "src": "capture",
         "shot": "12-your-call",
         "in": 6.6,
-        "push": [1, 1.04],
-        "crop": [640, 90, 1260, 709]
+        "push": [
+          1,
+          1.04
+        ],
+        "crop": [
+          640,
+          90,
+          1260,
+          709
+        ]
       },
-      "overlays": [{ "title": "v16-reveal", "at": 0.05 }],
-      "vo": [{ "id": "vo23", "at": 0.05, "text": "He saw the run. Would you?" }],
-      "out": { "type": "cut" },
+      "overlays": [
+        {
+          "title": "v16-reveal",
+          "at": 0.05
+        }
+      ],
+      "vo": [
+        {
+          "id": "vo23",
+          "at": 0.05,
+          "text": "He saw the run. Would you?"
+        }
+      ],
+      "out": {
+        "type": "cut"
+      },
       "sfx": [],
-      "fx": ["lift"]
+      "fx": [
+        "lift"
+      ]
     },
     {
       "id": "b33-studio-a",
-      "dur": 1.4,
+      "dur": 3.4,
       "picture": {
         "src": "capture",
         "shot": "03-breakdown",
         "in": 0,
-        "push": [1, 1.03]
+        "push": [
+          1,
+          1.03
+        ]
       },
-      "overlays": [{ "title": "v16-studio-a", "at": 0.05 }],
+      "overlays": [
+        {
+          "title": "v16-studio-a",
+          "at": 0.05
+        }
+      ],
       "vo": [
         {
           "id": "vo37",
@@ -3015,18 +3259,47 @@
         }
       ],
       "sfx": [],
-      "fx": ["lift"],
-      "out": { "type": "cut" }
+      "fx": [
+        "lift"
+      ],
+      "out": {
+        "type": "cut"
+      }
     },
     {
       "id": "b34-studio-b",
-      "dur": 1.8,
+      "dur": 3.2,
       "picture": {
         "src": "split",
-        "left": { "src": "capture", "shot": "03-breakdown", "in": 1.2, "crop": [0, 0, 1920, 1080] },
-        "right": { "src": "capture", "shot": "06-language", "in": 0, "crop": [0, 0, 1920, 1080] }
+        "left": {
+          "src": "capture",
+          "shot": "03-breakdown",
+          "in": 1.2,
+          "crop": [
+            0,
+            0,
+            1920,
+            1080
+          ]
+        },
+        "right": {
+          "src": "capture",
+          "shot": "06-language",
+          "in": 0,
+          "crop": [
+            0,
+            0,
+            1920,
+            1080
+          ]
+        }
       },
-      "overlays": [{ "title": "v16-studio-b", "at": 0.05 }],
+      "overlays": [
+        {
+          "title": "v16-studio-b",
+          "at": 0.05
+        }
+      ],
       "vo": [
         {
           "id": "vo16",
@@ -3035,67 +3308,46 @@
         }
       ],
       "sfx": [],
-      "fx": ["lift"],
-      "out": { "type": "cut" }
-    },
-    {
-      "id": "b35-studio-c",
-      "dur": 1.4,
-      "picture": {
-        "src": "capture",
-        "shot": "29-content",
-        "in": 0,
-        "push": [1, 1.03]
-      },
-      "overlays": [{ "title": "v16-studio-c", "at": 0.05 }],
-      "vo": [{ "id": "vo38", "at": 0.05, "text": "A highlight package, ready to post." }],
-      "sfx": [],
-      "fx": ["lift"],
-      "out": { "type": "cut" }
-    },
-    {
-      "id": "b36-studio-d",
-      "dur": 1.6,
-      "picture": {
-        "src": "capture",
-        "shot": "31-studio",
-        "in": 0,
-        "push": [1, 1.03]
-      },
-      "overlays": [{ "title": "v16-studio-d", "at": 0.05 }],
-      "vo": [
-        {
-          "id": "vo39",
-          "at": 0.05,
-          "text": "And the stadium screens, on a matchday clock."
-        }
+      "fx": [
+        "lift"
       ],
-      "sfx": [],
-      "fx": ["lift"],
-      "out": { "type": "cut" }
+      "out": {
+        "type": "cut"
+      }
     },
     {
       "id": "b37-value",
-      "dur": 2.6,
+      "dur": 3.8,
       "picture": {
         "src": "capture",
         "shot": "30-value",
         "in": 0,
-        "push": [1, 1.03]
+        "push": [
+          1,
+          1.03
+        ]
       },
-      "overlays": [{ "title": "v16-value", "at": 0.05 }],
+      "overlays": [
+        {
+          "title": "v16-value",
+          "at": 0.05
+        }
+      ],
       "vo": [
         {
           "id": "vo40",
           "at": 0.05,
-          "text": "Value on the league's own levers. The demo figures are labelled simulated."
+          "text": "Value on the league's own levers, with demo figures labelled."
         }
       ],
       "sfx": [],
-      "fx": ["lift"],
-      "out": { "type": "cut" }
+      "fx": [
+        "lift"
+      ],
+      "out": {
+        "type": "cut"
+      }
     },
-
     {
       "id": "b38-evidence",
       "dur": 2.4,
@@ -3103,10 +3355,23 @@
         "src": "capture",
         "shot": "07-evidence",
         "in": 1.6,
-        "crop": [0, 0, 1244, 700],
-        "push": [1, 1.06]
+        "crop": [
+          0,
+          0,
+          1244,
+          700
+        ],
+        "push": [
+          1,
+          1.06
+        ]
       },
-      "overlays": [{ "title": "v16-evidence", "at": 0.05 }],
+      "overlays": [
+        {
+          "title": "v16-evidence",
+          "at": 0.05
+        }
+      ],
       "vo": [
         {
           "id": "vo09",
@@ -3114,9 +3379,20 @@
           "text": "Every line is checked against the simulation before it airs."
         }
       ],
-      "sfx": [{ "name": "stamp", "at": 2.1, "gain_db": -4 }],
-      "fx": ["lift", "vignette"],
-      "out": { "type": "cut" }
+      "sfx": [
+        {
+          "name": "stamp",
+          "at": 2.1,
+          "gain_db": -4
+        }
+      ],
+      "fx": [
+        "lift",
+        "vignette"
+      ],
+      "out": {
+        "type": "cut"
+      }
     },
     {
       "id": "b42-s4a-pov",
@@ -3264,40 +3540,84 @@
       "id": "b42-app-s4-check",
       "story": "app",
       "dur": 3.033,
-      "picture": { "src": "cine", "id": "press-pov-f", "in": 0 },
+      "picture": {
+        "src": "cine",
+        "id": "press-pov-f",
+        "in": 0
+      },
       "letterbox": 2.39,
-      "fx": ["glue"],
-      "overlays": [{ "title": "label-ie-3p033", "at": 0 }],
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-3p033",
+          "at": 0
+        }
+      ],
       "section": "close"
     },
     {
       "id": "b43-app-s4-escape",
       "story": "app",
       "dur": 1.8,
-      "picture": { "src": "cine", "id": "press-low", "in": 1.2 },
+      "picture": {
+        "src": "cine",
+        "id": "press-low",
+        "in": 1.2
+      },
       "letterbox": 2.39,
-      "fx": ["glue"],
-      "overlays": [{ "title": "label-ie-1p8", "at": 0 }],
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-1p8",
+          "at": 0
+        }
+      ],
       "section": "close"
     },
     {
       "id": "b44-app-s4-fp-look",
       "story": "app",
       "dur": 1.7,
-      "picture": { "src": "cine", "id": "fp-pov", "in": 0 },
+      "picture": {
+        "src": "cine",
+        "id": "fp-pov",
+        "in": 0
+      },
       "letterbox": 2.39,
-      "fx": ["glue"],
-      "overlays": [{ "title": "label-ie-1p7", "at": 0 }],
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-1p7",
+          "at": 0
+        }
+      ],
       "section": "close"
     },
     {
       "id": "b45-app-s4-fp-goal",
       "story": "app",
       "dur": 1.8,
-      "picture": { "src": "cine", "id": "fp-finish", "in": 0.4 },
+      "picture": {
+        "src": "cine",
+        "id": "fp-finish",
+        "in": 0.4
+      },
       "letterbox": 2.39,
-      "fx": ["glue"],
-      "overlays": [{ "title": "label-ie-1p8", "at": 0 }],
+      "fx": [
+        "glue"
+      ],
+      "overlays": [
+        {
+          "title": "label-ie-1p8",
+          "at": 0
+        }
+      ],
       "section": "close"
     },
     {

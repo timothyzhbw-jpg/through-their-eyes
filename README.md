@@ -17,7 +17,7 @@ match recap, the Tactics lab, five audiences, and English and Chinese.
 
 ### [▶ Try the live app](https://ttesite1ff906.z14.web.core.windows.net) · free, no login, a synthetic match with fictional players
 
-**[▶ Watch the video](https://youtu.be/1Z14E_X2JXA)** (1:27, captions burned in)
+**[▶ Watch the video](https://youtu.be/q2_qIRchqYs)** (1:37, captions burned in)
 
 [![The live app in first person, through the eyes of J. Ferriday, the midfielder, during his look over the shoulder. The KEY SCAN tag is lit; the runner N. Varnhall, marked in gold by the goal on the right, is in his sight; the verified caption reads "J. Ferriday scanned once in the 2 seconds before receiving."](docs/hero-key-scan.jpg)](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0)
 
