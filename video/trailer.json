@@ -1370,7 +1370,7 @@
       "params": {
         "name": "H8",
         "role": "THE MIDFIELDER",
-        "sub": "A SINGLE LOOK. THAT'S ALL HE GETS.",
+        "sub": "A SINGLE SCAN. THAT'S ALL HE GETS.",
         "spot": {
           "x": 1305,
           "y": 560,
@@ -1868,7 +1868,7 @@
         "kicker": "GET YOUR VISION",
         "lines": [
           {
-            "text": "WITHOUT THAT LOOK…",
+            "text": "WITHOUT THAT SCAN…",
             "color": "dusk",
             "size": 120
           }
@@ -2184,7 +2184,7 @@
       "dur": 2.8,
       "alpha": true,
       "params": {
-        "kicker": "WITHOUT THE LOOK",
+        "kicker": "WITHOUT THE SCAN",
         "lines": [
           {
             "text": "THE CHANCE IS GONE",
@@ -2592,7 +2592,7 @@
         {
           "id": "vo44",
           "at": 0.15,
-          "text": "Without that look, he plays it safe, and the chance is gone."
+          "text": "Without that scan, he plays it safe, and the chance is gone."
         }
       ],
       "sfx": [],
@@ -2667,7 +2667,7 @@
         {
           "id": "vo42",
           "at": 0.3,
-          "text": "Through Their Eyes shows what the player saw and what he believed. Remove a look, and it re-runs the moment, so every decision gets real feedback."
+          "text": "Through Their Eyes shows what the player saw and what he believed. Remove a scan, and it re-runs the moment, so every decision gets real feedback."
         }
       ],
       "sfx": []
@@ -2775,7 +2775,7 @@
         {
           "id": "vo31",
           "at": 0,
-          "text": "He gets a single look."
+          "text": "A single scan."
         },
         {
           "id": "vo32",
@@ -2941,7 +2941,7 @@
         {
           "id": "vo03b",
           "at": 0.15,
-          "text": "Every look shows him something new — and new options."
+          "text": "Every scan shows him something new — and new options."
         }
       ],
       "sfx": [
@@ -3021,7 +3021,7 @@
         {
           "id": "vo05",
           "at": 0.3,
-          "text": "Take that look away, and re-run the match."
+          "text": "Take that scan away, and re-run the match."
         }
       ],
       "sfx": [],
