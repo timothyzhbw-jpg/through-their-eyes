@@ -325,7 +325,7 @@ Four people, each owning one area and reviewing the others' work.
 |---|---|
 | Jiaan Hu | **Product manager.** Product direction, target users, MVP scope and feature priorities; the project's narrative and demo priorities; the business value (AI tactical broadcast, personalised commentary, automated highlights). |
 | Bowen Zhang | **Website development and visual production.** Builds and maintains the app and its website to the agreed requirements; creates the cinematic sequences that show the concept. |
-| Yiting Shen | **Synthetic data and source review.** Prepares the synthetic match data used by the prototype and the demo; checks the provenance of assets and reference material; keeps demo material clearly apart from real match data. |
+| Yiting Shen | **Synthetic data and source review.** Prepares the synthetic match data used by the prototype and the demo; checks the provenance of assets and reference material; keeps demo material clearly apart from real match data. Contributed to AI-powered soccer analytics through feature ideation, counterfactual simulation design, explainability improvements, and product testing. |
 | Jiangyan Yang | **Website feature planning, commentary refinement, football domain review and user testing.** Plans page-level features with the product manager; refines the explanatory commentary so that it states the player's decisions and the tactics plainly; reviews the football and tests the app with users. |
 
 Shared by all four: reviewing the integrated prototype and the demo flow before submission, and
