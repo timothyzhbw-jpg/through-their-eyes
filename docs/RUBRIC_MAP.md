@@ -14,9 +14,10 @@ less than the claim.
   [`video/trailer.json`](../video/trailer.json); [VIDEO_SCRIPT](VIDEO_SCRIPT.md) tells the earlier cuts.
 - **Numbers:** each number below is listed in [NUMBERS](NUMBERS.md) with the report or command
   that produces it.
-- **State:** 2026-10-22, `main` at `39aaf27`. The last CI counts recorded: run 39583678095 on
-  `44c0bb5` (2026-10-21), pytest 1216 passed, `npm test` in `web/` 595 passed, the end-to-end
-  smoke test 15 of 15 pages. TODO(freeze): the counts on the submitted commit (NUMBERS D3).
+- **State:** CI run [40551358859](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/runs/40551358859)
+  on `2e2492e0` (2026-10-27): pytest 2058 passed (2 skipped), `npm test` in `web/` 1651 passed,
+  the end-to-end smoke test 77 of 77 pages (NUMBERS D3). Later commits on `main` change docs,
+  the video spec and web copy; their runs are on the [CI page](https://github.com/timothyzhbw-jpg/through-their-eyes/actions/workflows/ci.yml?query=branch%3Amain).
   Pull requests are in `timothyzhbw-jpg/through-their-eyes`; work committed straight to `main`
   is cited by commit.
 
@@ -160,10 +161,6 @@ because every step after it runs again (MA2b). What it does not buy is better li
 structures aired no wrong facts and scored the same on groundedness
 ([crew_vs_single](../eval/reports/crew_vs_single.md), MA5).
 
-<!-- TODO(freeze): a screenshot of one live breakdown's trace in Application Insights (the agent
-spans and their handoffs), taken after the 10/24 prewarm; save it as
-docs/screenshots/appinsights-trace.png and show it here (docs/NUMBERS.md D2). -->
-
 ### Why a crew
 
 We ran one Foundry agent doing the four model roles in one call (the crew's schemas side by
@@ -223,8 +220,8 @@ Verifier, not the crew, stopped all of them. The crew costs about twice as much 
 
 ### The live trace
 
-TODO(freeze): re-capture after the last deploy (NUMBERS D2). This one predates the Director's
-budget (PR #123), the names (PR #126) and the persona rules (PR #127).
+This trace predates the Director's budget (PR #123), the names (PR #126) and the persona rules
+(PR #127).
 
 One model-backed breakdown (coach, en) on the deployed API, from Application Insights,
 2026-10-20 21:34:51 UTC (revision `tte-api--0000017`, image `6e58a48`), 15.5 s inside the
@@ -289,6 +286,6 @@ union dependencies, requests
 ## Development tools
 
 Built with Claude Code. GitHub Copilot, the Azure MCP Server and Microsoft Fabric were not used:
-no commit, file or pull request mentions them (git history and all 30 pull requests checked on
-2026-10-20; TODO(freeze): re-check every pull request, NUMBERS D4), so no Copilot usage file is
+no commit or pull request reports using them (git history and all 265 pull requests checked on
+2026-10-27; the only mentions, in #33, say they were not used; NUMBERS D4), so no Copilot usage file is
 included.

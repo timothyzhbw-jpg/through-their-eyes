@@ -1,13 +1,7 @@
-# Through Their Eyes: submission page (draft)
+# Through Their Eyes: submission page
 
-Draft text for the Innovation Studio project page (SPEC §11), for Bowen to edit and approve.
-Each number has a footnote naming the committed report, test or check it comes from. Drop the
-footnotes when pasting into the page, or keep them as links. Open questions are marked
-`TODO(Bowen)`.
-
-<!-- State: main at febaa08 plus this PR (2026-10-21, US Central).
-Before submitting: re-run `uv run pytest` and `uv run python -m sim.match --seed 1` on the
-commit you submit and update [^tests] and [^match]. -->
+The long text behind the Innovation Studio project page (SPEC §11). Each number has a footnote
+naming the committed report, test or check it comes from.
 
 ---
 
@@ -62,8 +56,7 @@ at Azure list prices of 2026-10-22.[^azure-prices]
 - **Cost to serve.** One moment in four scripts: about $0.01 of Foundry `gpt-4.1-mini` (12
   requests, 22K tokens)[^crew] and about $0.03 of speech if every line is voiced ($0.0012 a
   line).[^tts] Hosting at demo scale: $17–46 a month, idle to busy.[^hosting] A re-watch costs
-  no model call: breakdowns are cached by content and served in 0.15 s.[^latency] The cache's
-  share of views: TODO(freeze).
+  no model call: breakdowns are cached by content and served in 0.15 s.[^latency]
 - **What a licence must cover (hypothesis).** Twenty moments in five audiences and two languages
   cost about $0.50 of model calls and $1.40 of speech, so a per-match price is set by hosting, the
   tracking feed and editorial review, not by the model. We set no price and quote no market size
@@ -252,7 +245,7 @@ schemas and checks, against the crew, on six moments for four audiences each.[^c
 | Simulator statistics against published values | <!--num:R3.inside-->11<!--/num--> inside the published range, <!--num:R3.outside-->5<!--/num--> outside, <!--num:R3.none-->10<!--/num--> with no published value | [^realism] |
 | GPU pitch-control shader against the numpy reference | max difference about 5e-5 (target < 0.02) | [^parity] |
 | Same seed, same output (same platform) | byte-identical | [^determinism] |
-| Test suites in CI on `main` | Python 1216 passed; web 595 passed; end-to-end smoke 15 of 15 pages | [^tests] |
+| Test suites in CI on `main` | Python 2058 passed; web 1651 passed; end-to-end smoke 77 of 77 pages | [^tests] |
 
 ## Microsoft technologies, where they are used
 
@@ -468,8 +461,8 @@ play that attacks the goal.
     10 hero-moment snapshots in headless Chrome.
 [^determinism]: [tests/test_sim_m1.py](../tests/test_sim_m1.py)
     `test_same_seed_twice_in_the_same_environment_is_byte_identical`.
-[^tests]: CI run 39583678095 on main at 44c0bb5, 2026-10-21: pytest "1216 passed in 612.99s",
-    vitest "Tests 595 passed", smoke "15 of 15 pages passed".
+[^tests]: CI run 40551358859 on main at 2e2492e0, 2026-10-27: pytest "2058 passed, 2 skipped",
+    vitest "Tests 1651 passed", smoke "77 of 77 pages passed".
 [^matchstats]: [eval/reports/match_stats.md](../eval/reports/match_stats.md): possession changes
     by tackle per 90 min 0 and out of play 0 (n = 20 matches); "Tackles are on in press_escape
     only".
@@ -493,5 +486,5 @@ play that attacks the goal.
     ([announcement](https://news.microsoft.com/source/2025/07/01/premier-league-and-microsoft-announce-five-year-strategic-partnership-to-personalize-the-fan-experience-with-ai-for-1-8-billion-people/)):
     "open-text questions and answers in fans' native languages through text and audio
     translation".
-[^devtools]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md#development-tools): git history and all pull
-    requests checked on 2026-10-20.
+[^devtools]: [docs/RUBRIC_MAP.md](RUBRIC_MAP.md#development-tools): git history and all 265 pull
+    requests checked on 2026-10-27.
