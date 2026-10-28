@@ -416,18 +416,22 @@ function CompareSummary() {
     ? optionLabel(decision.chosen, personLookup(hero)).replace(/^./, (c) => c.toLowerCase())
     : null;
   const cost = line("look_cost")?.text;
-  const result = chosen ? `With it, ${chosen}.${cost ? ` ${cost}` : ""}` : null;
-  if (!look && !result) return null;
+  // In Chinese the checked lines say it all: no English clause is spliced onto them.
+  const zh = language === "zh" && !!data?.answers.zh && !!line(REMOVED_LOOK);
+  const summary = zh
+    ? { look: line(REMOVED_LOOK)!.text, result: cost ?? null }
+    : { look, result: chosen ? `With it, ${chosen}.${cost ? ` ${cost}` : ""}` : null };
+  if (!summary.look && !summary.result) return null;
   return (
-    <div className="journey-compare-summary" lang={language}>
-      {look && (
+    <div className="journey-compare-summary" lang={zh ? "zh" : "en"}>
+      {summary.look && (
         <p className="note">
-          <strong>The look:</strong> {look}
+          <strong>{zh ? "那一眼：" : "The look:"}</strong> {summary.look}
         </p>
       )}
-      {result && (
+      {summary.result && (
         <p className="note">
-          <strong>The result:</strong> {result}
+          <strong>{zh ? "结果：" : "The result:"}</strong> {summary.result}
         </p>
       )}
     </div>

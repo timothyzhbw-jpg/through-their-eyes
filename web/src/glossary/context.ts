@@ -28,11 +28,11 @@ export function contextLine(
         const size = Math.abs(difference).toFixed(2);
         if (difference < 0) {
           return zh
-            ? `此刻：这一处理损失了${size}的预期威胁。`
+            ? `此刻：这样处理少了${size}的预期威胁。`
             : `Here: this cost ${size} of expected threat.`;
         }
         return zh
-          ? `此刻：这一处理的预期威胁差为${size}。`
+          ? `此刻：两种处理的预期威胁相差${size}。`
           : `Here: the expected-threat difference is ${size}.`;
       }
       const value = find(claims, ["pass_zones", "extra_zones"], "xt");
@@ -46,7 +46,7 @@ export function contextLine(
       const value = find(claims, ["scans_before_reception"], "n");
       if (value === null || !Number.isInteger(value)) return null;
       return zh
-        ? `此刻：他在接球前扭头观察了${value}次。`
+        ? `此刻：他在接球前回头观察了${value}次。`
         : `Here: he scanned ${value} ${value === 1 ? "time" : "times"} before receiving.`;
     }
     case "final-third": {
@@ -55,7 +55,7 @@ export function contextLine(
       );
       return present
         ? zh
-          ? "此刻：这次传球在前场三区被接到。"
+          ? "此刻：这脚传球在前场三区找到了队友。"
           : "Here: the pass was received in the final third."
         : null;
     }

@@ -398,6 +398,18 @@ describe("the bar and its panels", () => {
     expect(lines[1].textContent).not.toContain("without it, Without");
   });
 
+  it("sums it up in Chinese from the checked lines alone, with no English spliced in", async () => {
+    const { container, session } = mount(<ComparePanel />);
+    await act(() => withoutLookOf(session, undefined, "/data/").load());
+    act(() => session.breakdown.set({ language: "zh" }));
+    const summary = container.querySelector(".journey-compare-summary")!;
+    expect(summary.getAttribute("lang")).toBe("zh");
+    const [look, result] = [...summary.querySelectorAll("p")].map((p) => p.textContent ?? "");
+    expect(look.startsWith("那一眼：")).toBe(true);
+    expect(result.startsWith("结果：")).toBe(true);
+    expect(look + result).not.toMatch(/where he saw|With it|The look|The result/);
+  });
+
   it("shows no look summary for a hero without a key scan", () => {
     const { container } = mount(<ComparePanel />, { ...hero, keyScan: null });
     expect(container.querySelector(".journey-compare-summary")).toBeNull();

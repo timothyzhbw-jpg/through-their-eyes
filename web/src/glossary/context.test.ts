@@ -39,7 +39,7 @@ describe("this moment's context", () => {
       "Here: this cost 0.11 of expected threat.",
     );
     expect(contextLine(term, "zh", [claim("cf_value", { dxt: -0.11 })])).toBe(
-      "此刻：这一处理损失了0.11的预期威胁。",
+      "此刻：这样处理少了0.11的预期威胁。",
     );
   });
 
