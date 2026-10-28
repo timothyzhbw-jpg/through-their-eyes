@@ -15,11 +15,14 @@ import {
 } from "../options/passOptions";
 import { useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
-import { boardZoom } from "../views/scene";
+import { boardZoom, PITCH } from "../views/scene";
 import { KindTag } from "./Narration";
 import { SourceChip } from "../provenance/SourceChip";
 
 const PICK_PX = 10; // pointer tolerance
+/** The band under the pitch the key needs on the stage: its two lines, and the up to 45 px of the
+ * board's bottom edge that the caption (in the run without the look, its note) covers. */
+const UNDER_PITCH_PX = 96;
 
 function useSize<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -61,6 +64,10 @@ export function OptionsOverlay() {
 
   const tagged = verified && options.find((o) => o.action === verified.action);
   const tagAt = tagged && toScreen(along(tagged, 0.62), w, h, zoom);
+  // Where the board is taller than the pitch, the key can sit under it, clear of the caption
+  // (styles.css places it on the stage; elsewhere it keeps the bottom edge).
+  const pitchBottom = toScreen([0, -PITCH.halfWidth], w, h, zoom)[1];
+  const underPitch = h - pitchBottom >= UNDER_PITCH_PX;
 
   return (
     <div
@@ -84,7 +91,10 @@ export function OptionsOverlay() {
       )}
       {visible && hover && <HoverCard hover={hover} width={w} height={h} verified={verified} />}
       {visible && (
-        <p className="options-legend">
+        <p
+          className={underPitch ? "options-legend under-pitch" : "options-legend"}
+          style={{ "--pitch-bottom": `${Math.round(pitchBottom)}px` } as React.CSSProperties}
+        >
           Pass options: width = chance he picked it · brighter = more threat · dashed = on the truth
         </p>
       )}

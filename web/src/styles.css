@@ -3300,6 +3300,31 @@ optgroup {
   color: var(--chalk-2);
   pointer-events: none;
 }
+/* On the stage the caption rises over the board's bottom edge (in the run without the look its
+   note is up the whole time: at 1440 x 900 only "Pass opti" of the key showed, on a phone they
+   were text on text, as with the one live stat). The key takes the top edge, or the band under
+   the pitch where the board is taller than the pitch (OptionsOverlay). It keeps the bottom edge
+   where the top one is taken: by the run switch's line on screens wider than 5:3 (it reaches over
+   the board's top there), and by the skeleton's key (keyCorner). */
+.slot.main .view.tac .options-legend {
+  top: 10px;
+  bottom: auto;
+}
+.slot.main .view.tac .options-legend.under-pitch {
+  top: calc(var(--pitch-bottom) + 6px);
+}
+@media (min-width: 1181px) and (min-aspect-ratio: 5 / 3) {
+  .slot.main .view.tac .options-legend:not(.under-pitch) {
+    top: auto;
+    bottom: 10px;
+  }
+}
+@media (min-width: 761px) {
+  .slot.main .view.tac:has(.skeleton-key) .options-legend:not(.under-pitch) {
+    top: auto;
+    bottom: 10px;
+  }
+}
 .blind-side-key {
   display: flex;
   align-items: flex-start;
@@ -4035,13 +4060,6 @@ optgroup {
      covered most of a 320 px picture */
   .stage-ticker .stat-chip:has(+ .stat-chip) {
     display: none;
-  }
-  /* On the board the one live stat sits on its bottom edge, where the pass options' key is: the
-     key goes up a line while a stat shows (they were text on text). */
-  .stage.focus-tactical:not(:has(.stage-caption .caption-text)):has(.stage-ticker .stat-chip)
-    .view.tac
-    .options-legend {
-    bottom: 50px;
   }
 }
 /* A small phone's picture is 240 px tall: with a caption up, his readouts keep to the alert. The
