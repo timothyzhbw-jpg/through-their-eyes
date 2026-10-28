@@ -25,10 +25,10 @@ match recap, the Tactics lab, five audiences, and English and Chinese.
 overlays arrive as timecoded cues for their graphics engine; clubs and academies, to review and
 train scanning on their own tracking; the league's fan apps, for explainers in their fans'
 languages (we ship English and Chinese) and audio description for blind and low-vision fans.
-One explained moment in four scripts costs about <!--num:MA6-->$0.0090<!--/num--> in model calls, and a re-watch
-costs no model call (breakdowns are cached), so a licence is priced by the tracking feed and
+One explained moment in four scripts costs about $0.01 in model calls, and a re-watch costs no
+model call (breakdowns are cached), so a licence is priced by the tracking feed, hosting and
 editorial review, not by the model. These are hypotheses: no customer has seen it yet
-([business model](docs/SUBMISSION.md#business-model), [who uses it](#who-uses-it)).
+([four products](#one-engine-four-products), [business model](#business-model), [who uses it](#who-uses-it)).
 
 **Category: Best Multi-Agent System.** The crew in 30 seconds ([full answer](#best-multi-agent-system), each judging criterion in [RUBRIC_MAP](docs/RUBRIC_MAP.md)):
 - Four model agents on Microsoft Agent Framework (Director; Analyst, calling our MCP tool server; Telestrator; narration in two voices) and two code steps (Verifier, Voice), joined by typed handoffs, a rewrite loop and checkpoints.
@@ -121,6 +121,9 @@ simulated by a seeded model, not measured: nobody has watched this app. Each one
 checked by the Verifier. Clubs, players and sponsors are all fictional.
 
 ## What only we do
+**A vision cone says what he could have seen. We model where he looked and what he still
+believed, and re-run the same seconds with one look removed.**
+
 First-person replays and vision cones already exist ([related work](#related-work)); they show
 what a camera, or a cone, could see. We model what the player *knew*. Each simulated player
 turns his head on a schedule calibrated to published scan rates (2.77 scans in the 10 s before
@@ -136,8 +139,9 @@ captions before it airs (all <!--num:A5.k-->90<!--/num--> falsified claims refut
 rejected: [corruption](eval/reports/corruption.md)).
 
 ## Path to production
-- **Who it is for.** A broadcaster's studio analyst explaining a replay on air, and a club's
-  analysts and coaches reviewing scanning and decisions with players.
+- **Who it is for.** A broadcaster's studio analyst explaining a replay on air, a club's
+  analysts and coaches reviewing scanning and decisions with players, and the league's fan apps
+  ([who uses it](#who-uses-it)).
 - **What it needs as input.** Player tracking at 25 Hz with head direction, the kind stadium
   limb tracking or broadcast pose models report. [analytics/keypoints.py](analytics/keypoints.py)
   turns COCO-style head, shoulder and hip keypoints into position and head yaw; on synthetic
@@ -150,27 +154,54 @@ rejected: [corruption](eval/reports/corruption.md)).
   25 fps (`GET /api/recaps/<key>/cues`, [agents/recap.py](agents/recap.py)).
 - **Controls.** Code checks every number the crew says or captions before it airs; every verdict
   goes to an audit log (Cosmos DB, `GET /api/matches/<id>/audit`); model calls are rate-limited
-  per client and capped per day, with deterministic templates and a cache behind them.
+  per client and capped per day, with deterministic templates and a cache behind them. The models
+  never write a number, in digits or in words: they pick verified claims and code fills in the
+  values ([explain/render.py](explain/render.py), [explain/numbers.py](explain/numbers.py)). There is no editor
+  sign-off step yet.
 - **Validated, and not.** The perception parameters are calibrated to published values: <!--num:R3.inside-->11<!--/num--> of 16
   checkable statistics fall inside the published range ([realism](eval/reports/realism.md)).
   Everything else, the hero results and every counterfactual included, holds inside our simulator
   only; see [Limitations](#limitations).
 - **Business model.** Who would pay and for what, what one explained moment costs us to serve
-  (about a cent of model calls), and what is still missing: [SUBMISSION](docs/SUBMISSION.md#business-model).
+  (about a cent of model calls), and what is still missing: [Business model](#business-model).
+
+## One engine, four products
+The **Belief Engine** is our simulator's perception model (scans → field of view → what he
+believed → his decision), the same seconds re-run without one look, and a Verifier that checks
+every number in code. Four products run on it in the live demo today, on synthetic matches;
+none has a customer yet ([business model](#business-model)).
+
+| Product | For | Live today | Not yet |
+|---|---|---|---|
+| **Studio Segment** | broadcasters' studio shows and alternate streams | [his look](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0), [without it](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical), a presenter's [What if…?](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F) re-simulated, the [full-time recap](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&play=recap) with its timecoded cue sheet | no graphics engine has rendered the cues; no half-time recap |
+| **Fan Explainer** | the league's fan apps | five audiences, each with its own lines, camera and voice, in English or Chinese, [audio description](https://ttesite1ff906.z14.web.core.windows.net/?persona=audio_description&intro=0) included; follow a club or a player; [highlights](https://ttesite1ff906.z14.web.core.windows.net/?step=highlights) as posts and 9:16 cards; [Make his call](https://ttesite1ff906.z14.web.core.windows.net/?play=yourcall) | two languages; one audience at a time |
+| **Scan Coach** | club video sessions and academies | the [coach's breakdown](https://ttesite1ff906.z14.web.core.windows.net/?persona=coach&intro=0), [the coach's example](https://ttesite1ff906.z14.web.core.windows.net/?play=steps&match=pro_scan-116) look by look, the [drill](https://ttesite1ff906.z14.web.core.windows.net/?play=drill) at two speeds | the club's own tracking: the [keypoint adapter](analytics/keypoints.py) is built, not wired |
+| **Verified Feed** | graphics, standards and app teams | `POST /api/verify`, the audit log (`GET /api/matches/<id>/audit`), cue sheets (`GET /api/recaps/<key>/cues`), the [OpenAPI reference](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/docs), our MCP tools | checks our own claims only; no editor sign-off step; the MCP server runs over stdio inside the service, with no public endpoint |
 
 ## Who uses it
-- **Broadcasters.** A "through his eyes" studio segment: the analyst plays the replay of a moment
-  and the audience sees what the player saw, with every number checked before it airs. The
-  overlays arrive as timecoded cues a graphics engine can render.
-- **Coaches and academies.** The [academy drill](https://ttesite1ff906.z14.web.core.windows.net/?play=drill)
-  asks the trainee where to look before the ball arrives, then shows what that look would have
-  caught. What the research does and does not show about scanning is in
-  [SUBMISSION, Who uses it](docs/SUBMISSION.md#who-uses-it).
-- **Blind and low-vision fans.** The audio description audience we ship: where he got the ball,
-  which way he looked and whom he saw, as verified lines in calm, slower speech, with large-print
-  captions and named controls ([ACCESSIBILITY](docs/ACCESSIBILITY.md)).
+![A storyboard of four real frames from the live app. 1, Saturday half-time, the studio: the first-person view at the key scan, with the KEY SCAN tag and a checked caption. 2, Saturday, the producer's desk: the failure drill panel, the Telestrator down on its template with a Bring back button while the other agents run. 3, Monday, the academy: the drill in first person, the ball arriving, asking where to look. 4, Any day, a fan's phone: the replay on two phones, the analyst in Chinese and the audio description view.](docs/matchday-storyboard.jpg)
 
-Who would pay, and what a moment costs to serve: [Business model](docs/SUBMISSION.md#business-model).
+A matchday as we picture it. No broadcaster, club or app uses it yet, and every link below runs on
+our synthetic match:
+
+1. **Saturday, half-time, the studio.** The stream has flagged the moment the midfielder's pass opened the game. The analyst calls it up: his looks in the seconds before the ball, the runner appearing on one of them, then the same seconds re-run without that look, where he plays it back instead. A graphics engine could draw it from the moment's timed plan ([agents/schemas.py](agents/schemas.py); at full time the recap adds a timecoded cue sheet, [agents/recap.py](agents/recap.py)), and every number in its captions and narration was checked by code before it aired. Today a replay or a vision cone shows what he could have seen, not where he looked or what he believed. [First person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0) · [without the look](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical) · [What if…?](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F) · [full-time recap](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&play=recap)
+2. **Saturday, the producer's desk.** An agent fails mid-breakdown. Its lines air from the template instead of going silent, and **Bring back** resumes from the last checkpoint. A line the Verifier refutes goes back for a rewrite or is dropped, and every verdict on the crew's lines is in the audit log. [Failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=producer) · [try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value) (a viewer's try is checked the same way, but not logged)
+3. **Monday, the academy video session.** The coach opens a moment for a U16 midfielder (on the club's own tracking, once it is connected). The player steps through his own looks, then the drill asks where he should have looked before the ball arrived and shows what that look would have caught. [Step through his looks](https://ttesite1ff906.z14.web.core.windows.net/?play=steps) · [coach's breakdown](https://ttesite1ff906.z14.web.core.windows.net/?persona=coach&intro=0) · [academy drill](https://ttesite1ff906.z14.web.core.windows.net/?play=drill)
+4. **On a phone, any day.** A fan taps the replay and hears it at their level, as a casual fan, analyst, player fan, coach or with audio description, in English or Chinese. A blind fan hears where he got the ball, which way he looked and whom he saw, in calm, slower speech ([ACCESSIBILITY](docs/ACCESSIBILITY.md)). [Audio description](https://ttesite1ff906.z14.web.core.windows.net/?persona=audio_description&intro=0) · [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0)
+
+What the research does and does not show about scanning is in
+[SUBMISSION, Who uses it](docs/SUBMISSION.md#who-uses-it).
+
+### Business model
+Hypotheses, not sales: no customer has seen it. The costs are our own measurements at demo scale,
+at Azure list prices ([SUBMISSION, Business model](docs/SUBMISSION.md#business-model)).
+
+| | |
+|---|---|
+| **What is sold** | A per-match or per-season licence to broadcasters' studios and alternate streams for the explainers and their timecoded cues; per-seat review of scanning and decisions for clubs' analysis departments, on their own tracking; explainers in fans' languages for the league's fan apps, which its partnership with Microsoft already plans ([announcement](https://news.microsoft.com/source/2025/07/01/premier-league-and-microsoft-announce-five-year-strategic-partnership-to-personalize-the-fan-experience-with-ai-for-1-8-billion-people/)). We set no price. No betting use. |
+| **What it costs to serve** | One explained moment in four scripts (casual and analyst, each in English and Chinese): about $0.01 of model calls, and about $0.03 of speech if every line is voiced. Twenty moments in five audiences and two languages: about $0.50 of model calls and $1.40 of speech. Hosting at demo scale: $17–46 a month, idle to busy. A re-watch costs no model call: breakdowns are cached by content. So a per-match price is set by the tracking feed, hosting and editorial review, not by the model. |
+| **How a pilot would run** | Once a rights holder supplies tracking with head orientation (below), one broadcaster's studio show uses the segment on its key moments, with an editor signing off each one. It measures the time from the moment to air, how often the segment is used, how many lines the Verifier stopped (every verdict is in the audit log) and how many the editor still changed. |
+| **What is still missing** | Tracking with head orientation from a rights holder, the rights to that data, a simulator calibrated on it, and human editorial review: the Verifier catches invented numbers, not omissions. |
 
 ## About
 Entry for the Microsoft × Premier League "Inside the Game" Developer Hackathon.
@@ -301,24 +332,32 @@ be, and its **Breakdown** is under **⋯ Settings → Moment** too.
   ```
 
 ## Evidence
-Every number below is measured inside our simulator, except the latency row, which is measured on
-the deployed service. Nothing has been run on real tracking data.
+Nothing has been run on real tracking data. Each row says which kind of result it is:
+- **Inside the sim**: a fact about the simulated football (his looks, his beliefs, his decisions).
+  It holds in our simulator only and would have to be measured again on real tracking.
+- **Product**: a fact about our software itself (the checker, the crew, the model calls, the
+  deployed service). Its inputs are synthetic, but what it measures is the software a customer
+  would run.
 
-| Claim | Number | Report |
-|---|---|---|
-| Without one look, the hero decides differently | <!--num:H1-->33/40<!--/num--> seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
-| Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | <!--num:H2-->34/40<!--/num-->; <!--num:H3-->40/40<!--/num--> | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
-| Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | <!--num:H4-->40/40<!--/num--> lost; <!--num:H5-->32/40<!--/num--> changed | [pressure](eval/reports/hero_lens_press_escape.md) |
-| … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | 22/40 → <!--num:H6-->30/40<!--/num--> changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
-| Set-piece hero (a corner): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | <!--num:H7-->37/40<!--/num--> | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
-| Scans detected from head yaw alone, nuisance head motion on (held-out F1) | <!--num:A1-->0.991<!--/num--> | [scan_detector](eval/reports/scan_detector.md) |
-| Blind-side alerts vs the sim's beliefs (fresh seeds; an upper bound for real tracking) | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
-| Perturbed claims refuted by the verifier (a number off by one unit or by 20%, a swapped player, a wrong order; of 100, the 6 that stayed true and the 4 the recording cannot decide are excluded); true claims it wrongly rejected | <!--num:A5-->90/90<!--/num-->; <!--num:A5b.rejected-->0<!--/num--> of <!--num:A5b.n-->468<!--/num--> | [corruption](eval/reports/corruption.md) |
-| Sim statistics vs published values | table with citations | [realism](eval/reports/realism.md) |
-| Free-text vs anchored narration, same moment and seeds: first-draft lines naming a player or number that no claim holds (none passed the verifier); groundedness of the scripts that aired (1–5, Foundry evaluator) | 34 of 66 vs 0 of 111; 4.90 vs 5.00 | [narration_ablation](eval/reports/narration_ablation.md) |
-| The crew against one agent doing its four model roles in one call, same moments, tools and schemas (single vs crew): wrong facts aired; model roles kept with the Analyst or the Telestrator down; agent runs over the deployed 8 s step timeout; cost per breakdown | 0 vs 0; 0 of 4 vs 3 of 4; 6 of 6 vs 0 of 66; $0.0046 vs $0.0090 | [crew_vs_single](eval/reports/crew_vs_single.md) |
-| One uncached model breakdown on the deployed API (one audience, one language, the Analyst on MCP): on a warm replica; the first request after a deploy; from the cache | 12.9 s; 23.8–25.9 s; 0.15 s | [SPEC §8](docs/SPEC.md#8-platform-and-deploy), [live trace](docs/RUBRIC_MAP.md#the-live-trace) |
-| Audio description for blind and low-vision viewers: where he got the ball, which way he looked, whom he saw, each a verified claim; calm, slower SSML at any tier; in the web app sound on, large-print captions, narration and playback controls named and focusable | 6/6 template lines verified, 0 dropped (seed 3, en + zh) | [test_agents](tests/test_agents.py), [access.test](web/src/ui/access.test.tsx) |
+[![Eight held-out seeds of the hero scenario: H8's key scan as a cone, his pass with it in gold and, re-simulated without it, dashed](docs/hero-seeds.png)](eval/reports/hero_flip_blind_side_run.md)
+
+<sub>Not one cherry-picked moment: the same scenario on every fifth held-out seed, with H8's key scan and without it, drawn by [eval/seed_gallery.py](eval/seed_gallery.py). Over all held-out seeds, <!--num:H1-->33 of 40<!--/num--> decide differently ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).</sub>
+
+| Claim | Kind | Number | Report |
+|---|---|---|---|
+| Without one look, the hero decides differently | Inside the sim | <!--num:H1-->33/40<!--/num--> seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
+| Lens selection picks the lens each hero scenario is built for (held-out seeds): scan hero (100–139); pressure hero (fresh 200–239) | Inside the sim | <!--num:H2-->34/40<!--/num-->; <!--num:H3-->40/40<!--/num--> | [scan](eval/reports/hero_lens_blind_side_run.md), [pressure](eval/reports/hero_lens_press_escape.md) |
+| Forcing the pressure hero to keep the ball loses it; the possession outcome changes (target ≥ 60%), fresh seeds 200–239 | Inside the sim | <!--num:H4-->40/40<!--/num--> lost; <!--num:H5-->32/40<!--/num--> changed | [pressure](eval/reports/hero_lens_press_escape.md) |
+| … the same on seeds 100–139, before → after the decision model saw a presser's run-in (these seeds were used to find the cause) | Inside the sim | 22/40 → <!--num:H6-->30/40<!--/num--> changed | [seeds 100–139](eval/reports/hero_lens_press_escape_100-139.md) |
+| Set-piece hero (a corner): without the marker's look the runner is unmarked at the cutback, with it the marker is within 5 m (held-out seeds 100–139), against a gate revised during design (the plan's checks, in the same report, are not met) | Inside the sim | <!--num:H7-->37/40<!--/num--> | [hero_marking](eval/reports/hero_marking_corner_blind_side.md) |
+| Scans detected from head yaw alone, nuisance head motion on (held-out F1) | Inside the sim | <!--num:A1-->0.991<!--/num--> | [scan_detector](eval/reports/scan_detector.md) |
+| Blind-side alerts vs the sim's beliefs (fresh seeds; an upper bound for real tracking) | Inside the sim | precision ≥ 0.8, recall ≥ 0.7 met | [blind_side](eval/reports/blind_side.md) |
+| Perturbed claims refuted by the verifier (a number off by one unit or by 20%, a swapped player, a wrong order; of 100, the 6 that stayed true and the 4 the recording cannot decide are excluded); true claims it wrongly rejected | Product | <!--num:A5-->90/90<!--/num-->; <!--num:A5b.rejected-->0<!--/num--> of <!--num:A5b.n-->468<!--/num--> | [corruption](eval/reports/corruption.md) |
+| Sim statistics vs published values | Inside the sim, against published values | table with citations | [realism](eval/reports/realism.md) |
+| Free-text vs anchored narration, same moment and seeds: first-draft lines naming a player or number that no claim holds (none passed the verifier); groundedness of the scripts that aired (1–5, Foundry evaluator) | Product | 34 of 66 vs 0 of 111; 4.90 vs 5.00 | [narration_ablation](eval/reports/narration_ablation.md) |
+| The crew against one agent doing its four model roles in one call, same moments, tools and schemas (single vs crew): wrong facts aired; model roles kept with the Analyst or the Telestrator down; agent runs over the deployed 8 s step timeout; cost per breakdown | Product | 0 vs 0; 0 of 4 vs 3 of 4; 6 of 6 vs 0 of 66; $0.0046 vs $0.0090 | [crew_vs_single](eval/reports/crew_vs_single.md) |
+| One uncached model breakdown on the deployed API (one audience, one language, the Analyst on MCP): on a warm replica; the first request after a deploy; from the cache | Product | 12.9 s; 23.8–25.9 s; 0.15 s | [SPEC §8](docs/SPEC.md#8-platform-and-deploy), [live trace](docs/RUBRIC_MAP.md#the-live-trace) |
+| Audio description for blind and low-vision viewers: where he got the ball, which way he looked, whom he saw, each a verified claim; calm, slower SSML at any tier; in the web app sound on, large-print captions, narration and playback controls named and focusable | Product | 6/6 template lines verified, 0 dropped (seed 3, en + zh) | [test_agents](tests/test_agents.py), [access.test](web/src/ui/access.test.tsx) |
 
 ## Engineering
 | Practice | What it is | Where |
