@@ -444,7 +444,14 @@ describe("the bar and its panels", () => {
     openAt(container, "commentary");
     const p = panel(container);
     const audiences = [...p.querySelectorAll(".journey-audiences dt")].map((d) => d.textContent);
-    expect(audiences).toEqual(["Casual fan", "Tactical analyst", "Player focus", "Multilingual"]);
+    expect(audiences).toEqual([
+      "Casual fan",
+      "Tactical analyst",
+      "Player focus",
+      "Coach",
+      "Audio description",
+      "Multilingual",
+    ]);
     expect(p.textContent).toContain("We ship English and Chinese");
     expect(p.textContent).toContain("Now: Casual fan · English");
     act(() => p.querySelector<HTMLButtonElement>(".btn-primary")!.click());

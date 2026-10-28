@@ -528,6 +528,14 @@ const AUDIENCES: readonly { name: string; line: string }[] = [
     line: "Follow one player: his moments first, ringed on the pitch and on the board.",
   },
   {
+    name: "Coach",
+    line: "His eyes with the board beside them: when he looked against the ball, what changed without the look, and what to teach from it.",
+  },
+  {
+    name: "Audio description",
+    line: "For blind and low-vision fans: where he got the ball, which way he looked and whom he saw, in calm, slower speech with no jargon.",
+  },
+  {
     name: "Multilingual",
     line: "Subtitles, audio and summaries in the fan's language. We ship English and Chinese, each written for its language, not translated.",
   },
