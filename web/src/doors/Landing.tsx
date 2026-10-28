@@ -1,11 +1,13 @@
 // The landing page (SPEC 7, doors/): where a plain visit opens (?door=home; the header's brand
-// comes back to it). The promise and one primary button, door 1's story; then the three doors in a
-// few lines each, the explanatory copy the live screen used to carry under the picture, every
-// feature a link that opens it as its deep link does (a real href, so it can be copied or opened in
-// a new tab; a plain click opens it in place); then the evidence in one line and the demo-data
-// note. Nothing here plays or asks the service for anything: the picture waits behind The look.
+// comes back to it). The promise and one primary button, door 1's story, beside the product
+// itself: a short muted loop recorded from the live app at the key scan (a still for reduced
+// motion), which opens the same story; then the three doors in a few lines each, the explanatory
+// copy the live screen used to carry under the picture, every feature a link that opens it as its
+// deep link does (a real href, so it can be copied or opened in a new tab; a plain click opens it
+// in place); then the evidence in one line and the demo-data note. Nothing here asks the service
+// for anything: the live picture waits behind The look.
 
-import type { MouseEvent, ReactNode } from "react";
+import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { drillOf } from "../drill/controller";
 import { JOURNEY_STEPS, STEP_MARK, STEP_TITLE, type JourneyStep } from "../journey/steps";
 import { openStep } from "../journey/state";
@@ -14,10 +16,10 @@ import { SourceChip } from "../provenance/SourceChip";
 import { useSession } from "../session";
 import { stepThroughOf } from "../steps/controller";
 import { useStore } from "../store/store";
-import { takeEyesOf } from "../takeeyes/controller";
+import { prefersReducedMotion, takeEyesOf } from "../takeeyes/controller";
 import { envOf, quickTourFits } from "../tour/steps";
 import { startTour } from "../tour/tourState";
-import { ArrowIcon, CheckIcon } from "../ui/icons";
+import { ArrowIcon, CheckIcon, PauseIcon, PlayIcon } from "../ui/icons";
 import { hookOf, PITCH } from "../ui/IntroCard";
 import { extraLooksOf } from "../without/extra";
 import { useHeroGate } from "../without/WithoutLook";
@@ -39,6 +41,17 @@ export const HOME_LINKS = {
 
 const href = (action: string) =>
   `${import.meta.env.BASE_URL}${withPageAction(window.location.search, action)}`;
+
+/** The loop beside the promise: recorded from the live app (video/shots.json, 03-breakdown),
+ * cropped to the picture. */
+export const HOME_SHOT = {
+  video: `${import.meta.env.BASE_URL}img/home/key-scan.mp4`,
+  poster: `${import.meta.env.BASE_URL}img/home/key-scan.jpg`,
+} as const;
+
+/** A modified click opens the address in a new tab, as any link does. */
+const plainClick = (e: MouseEvent<HTMLAnchorElement>) =>
+  !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0);
 
 /** Door 1's story from the top: the quick tour where the moment has one, else the breakdown. */
 function useWatch(): { label: string; title?: string; watch: () => void } {
@@ -63,19 +76,22 @@ export function Landing() {
   const cut = line.lastIndexOf(" ");
   return (
     <section className="door-page door-home" aria-labelledby="home-title">
-      <header className="door-head home-head">
-        <p className="kicker accent">One moment · through his eyes</p>
-        <h2 id="home-title" tabIndex={-1}>
-          {line.slice(0, cut)} <em>{line.slice(cut + 1)}</em>
-        </h2>
-        <p className="lede">{PITCH}</p>
-        <div className="home-cta">
-          <button type="button" className="btn btn-primary" title={title} onClick={watch}>
-            {label}
-            <ArrowIcon />
-          </button>
-        </div>
-      </header>
+      <div className="home-hero">
+        <header className="door-head home-head">
+          <p className="kicker accent">One moment · through his eyes</p>
+          <h2 id="home-title" tabIndex={-1}>
+            {line.slice(0, cut)} <em>{line.slice(cut + 1)}</em>
+          </h2>
+          <p className="lede">{PITCH}</p>
+          <div className="home-cta">
+            <button type="button" className="btn btn-primary" title={title} onClick={watch}>
+              {label}
+              <ArrowIcon />
+            </button>
+          </div>
+        </header>
+        <HomeShot label={label} watch={watch} />
+      </div>
       <div className="home-doors">
         <LookDoor />
         <TurnDoor />
@@ -87,6 +103,76 @@ export function Landing() {
         <DemoBadge compact />
       </p>
     </section>
+  );
+}
+
+/** The product on the first screen: the live app in first person through the key scan, looping
+ * and muted (a still under reduced motion), with its own pause (WCAG 2.2.2: it loops past 5 s).
+ * The picture opens the same story as the primary button. */
+function HomeShot({ label, watch }: { label: string; watch: () => void }) {
+  const [still] = useState(prefersReducedMotion);
+  // Paused until the video says it plays: autoplay can be refused (iOS Low Power Mode).
+  const [paused, setPaused] = useState(true);
+  const video = useRef<HTMLVideoElement | null>(null);
+  const toggle = () => {
+    const el = video.current;
+    if (!el) return;
+    if (el.paused) void el.play().catch(() => {});
+    else el.pause();
+  };
+  return (
+    <figure className="home-shot">
+      <a
+        className="home-shot-link"
+        href={href(HOME_LINKS.story)}
+        aria-label={`Live app. ${label}`}
+        onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+          if (!plainClick(e)) return;
+          e.preventDefault();
+          watch();
+        }}
+      >
+        <video
+          className="home-shot-video"
+          src={HOME_SHOT.video}
+          poster={HOME_SHOT.poster}
+          width="1152"
+          height="688"
+          autoPlay={!still}
+          loop
+          playsInline
+          preload={still ? "none" : "auto"}
+          aria-hidden="true"
+          onPlay={() => setPaused(false)}
+          onPause={() => setPaused(true)}
+          // React sets muted as a property only; Safari wants the attribute before it autoplays.
+          ref={(el) => {
+            video.current = el;
+            if (!el) return;
+            el.muted = true;
+            el.setAttribute("muted", "");
+          }}
+        />
+        <span className="home-shot-tag">
+          <PlayIcon /> Live app
+        </span>
+      </a>
+      {!still && (
+        <button
+          type="button"
+          className="home-shot-pause"
+          aria-label="Pause the loop"
+          aria-pressed={paused}
+          onClick={toggle}
+        >
+          {paused ? <PlayIcon /> : <PauseIcon />}
+        </button>
+      )}
+      <figcaption className="home-shot-caption">
+        Recorded from the live app: his look over the shoulder before the ball arrives. The caption
+        is a checked line (✓).
+      </figcaption>
+    </figure>
   );
 }
 
@@ -113,8 +199,7 @@ function DoorSection({
               className="home-link"
               href={href(l.href)}
               onClick={(e: MouseEvent<HTMLAnchorElement>) => {
-                // A modified click opens the address in a new tab, as any link does.
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                if (!plainClick(e)) return;
                 e.preventDefault();
                 l.open();
               }}

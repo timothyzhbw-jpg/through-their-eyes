@@ -394,8 +394,8 @@ describe("the bar and its panels", () => {
       /^./,
       (c) => c.toLowerCase(),
     );
-    expect(lines[1].textContent).toContain(`The result: With it, ${action}; without it,`);
-    expect(lines[1].textContent).toContain("Without that look,");
+    expect(lines[1].textContent).toContain(`The result: With it, ${action}. Without that look,`);
+    expect(lines[1].textContent).not.toContain("without it, Without");
   });
 
   it("shows no look summary for a hero without a key scan", () => {

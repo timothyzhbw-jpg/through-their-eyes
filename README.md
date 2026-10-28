@@ -8,16 +8,33 @@
 
 > **See what they saw.** An AI studio that explains key football moments through the player's own
 > perception — where he looked before the ball arrived, what he saw, what he believed — and
-> re-simulates the moment without the look that made the play: over 40 held-out seeds,
-> <!--num:H1.k-->33<!--/num--> decide differently.
+> re-simulates the moment without the look that made the play, with the same seed and the same
+> random draws, so the only difference is what he no longer saw: over 40 held-out seeds,
+> <!--num:H1.k-->33<!--/num--> decide differently. Others count scans or force a different action;
+> we remove one look and leave the decision to him.
 
-**Every line the crew says is checked before it airs.** In an offline stress test. Of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false ([crew_evidence](eval/reports/crew_evidence.md)).
+**Every line the crew says is checked by code before it airs.** The model never writes a number: it picks verified claims, and code fills in the values. In an offline stress test of <!--num:V1.total-->2,837<!--/num--> deliberately broken lines, the Verifier kept every one off the air; without it, <!--num:V1.aired-->2,823<!--/num--> would have aired, <!--num:V1.false-->888<!--/num--> of them stating something false ([crew_evidence](eval/reports/crew_evidence.md)).
 Around it: the whole match streams live at 1×, with its moments in **⋯ Settings → Moment**, the
 match recap, the Tactics lab, five audiences, and English and Chinese.
 
 ### [▶ Try the live app](https://ttesite1ff906.z14.web.core.windows.net) · free, no login, a synthetic match with fictional players
 
 **[▶ Watch the video](https://youtu.be/q2_qIRchqYs)** (1:37, captions burned in)
+
+**Who pays, and what a moment costs.** Broadcasters, for a "through his eyes" studio segment whose
+overlays arrive as timecoded cues for their graphics engine; clubs and academies, to review and
+train scanning on their own tracking; the league's fan apps, for explainers in their fans'
+languages (we ship English and Chinese) and audio description for blind and low-vision fans.
+One explained moment in four scripts costs about <!--num:MA6-->$0.0090<!--/num--> in model calls, and a re-watch
+costs no model call (breakdowns are cached), so a licence is priced by the tracking feed and
+editorial review, not by the model. These are hypotheses: no customer has seen it yet
+([business model](docs/SUBMISSION.md#business-model), [who uses it](#who-uses-it)).
+
+**Category: Best Multi-Agent System.** The crew in 30 seconds ([full answer](#best-multi-agent-system), each judging criterion in [RUBRIC_MAP](docs/RUBRIC_MAP.md)):
+- Four model agents on Microsoft Agent Framework (Director; Analyst, calling our MCP tool server; Telestrator; narration in two voices) and two code steps (Verifier, Voice), joined by typed handoffs, a rewrite loop and checkpoints.
+- Models choose verified claim IDs; code fills in every number, and the Verifier vetoes any line it refutes.
+- Take any agent down on the live site and the breakdown still airs on that agent's template; bring it back and it runs again from the latest Agent Framework checkpoint ([failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=producer)).
+- Every aired line traces back to its claims, the voice call that chose it, the Verifier round that passed it and its voice cue.
 
 [![The live app in first person, through the eyes of J. Ferriday, the midfielder, during his look over the shoulder. The KEY SCAN tag is lit; the runner N. Varnhall, marked in gold by the goal on the right, is in his sight; the verified caption reads "J. Ferriday scanned once in the 2 seconds before receiving."](docs/hero-key-scan.jpg)](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0)
 
@@ -46,7 +63,8 @@ and a whole stitched match.
 
 ## From event to value
 The site opens on a [landing page](https://ttesite1ff906.z14.web.core.windows.net/?door=home):
-the promise, one **Watch the look (60 s)**, the three doors in a few lines each with every feature
+the promise and one **Watch the look (60 s)** beside a short muted loop recorded from the live app
+at the key scan (it opens the same story), the three doors in a few lines each with every feature
 one link away, and the evidence in one line. The brand in the header comes back to it. The three
 doors are always in the header beside one **⋯ Settings** menu (the moment, the audience and
 language, who to follow, sound, view options and the full tour).
@@ -271,7 +289,7 @@ be, and its **Breakdown** is under **⋯ Settings → Moment** too.
     ```
   No login. Model-backed regenerations are rate-limited per client and capped per day; past that
   the service serves the cache or the deterministic template.
-- **Failure drill** (tour step 9) over the API; each call counts against the rate limit:
+- **Failure drill** (tour step 6) over the API; each call counts against the rate limit:
   ```bash
   curl -X POST https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/breakdowns \
     -H 'content-type: application/json' \
@@ -492,9 +510,6 @@ because every step after it runs again (MA2b). What it does not buy is better li
 structures aired no wrong facts and scored the same on groundedness
 ([crew_vs_single](eval/reports/crew_vs_single.md), MA5).
 
-<!-- TODO(freeze): a screenshot of one live breakdown's trace in Application Insights (the agent
-spans and their handoffs), taken after the 10/24 prewarm; save it as
-docs/screenshots/appinsights-trace.png and show it here (docs/NUMBERS.md D2). -->
 
 ## Architecture
 <picture>

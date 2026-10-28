@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 // The landing page (SPEC 7, Landing.tsx): its address, the promise and its one primary button
 // (door 1's story), the three doors with every feature a link that opens it as its deep link does,
-// the evidence strip read from hero_gates.json, the brand that comes back to it, and the picture
-// that waits behind it.
+// the loop of the live app beside the promise (a still under reduced motion), the evidence strip
+// read from hero_gates.json, the brand that comes back to it, and the picture that waits behind it.
 
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -26,9 +26,9 @@ import { extraLooksOf, parseExtraLooks } from "../without/extra";
 import { heroGatesOf } from "../without/gates";
 import { yourCallOf } from "../yourcall/controller";
 import { parseDoor } from "./doors";
-import { HOME_LINKS } from "./Landing";
+import { HOME_LINKS, HOME_SHOT } from "./Landing";
 import { doors } from "./state";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 
 const doorsCss = readFileSync("src/doors/doors.css", "utf8"); // vitest runs in web/
 
@@ -195,6 +195,97 @@ describe("the landing page", () => {
     expect(primary.isConnected).toBe(false);
     act(() => closeTour());
     expect(document.activeElement).toBe(page.querySelector(".stage-head h1"));
+  });
+});
+
+describe("the product beside the promise", () => {
+  const motion = (reduce: boolean) =>
+    vi
+      .spyOn(window, "matchMedia")
+      .mockImplementation(
+        (query: string) =>
+          ({ matches: reduce && query.includes("reduce"), media: query }) as MediaQueryList,
+      );
+  afterEach(() => vi.restoreAllMocks());
+
+  it("loops the live app muted, from files the build ships", () => {
+    motion(false);
+    const page = mount(offline());
+    const video = page.querySelector<HTMLVideoElement>(".door-home .home-hero video")!;
+    expect(video.getAttribute("src")).toBe(HOME_SHOT.video);
+    expect(video.getAttribute("poster")).toBe(HOME_SHOT.poster);
+    expect(video.muted).toBe(true);
+    expect(video.hasAttribute("muted")).toBe(true);
+    expect(video.autoplay).toBe(true);
+    expect(video.loop).toBe(true);
+    expect(video.hasAttribute("playsinline")).toBe(true);
+    expect(video.getAttribute("aria-hidden")).toBe("true");
+    for (const path of [HOME_SHOT.video, HOME_SHOT.poster]) {
+      expect(statSync(`public${path}`).size, path).toBeGreaterThan(10_000); // vitest runs in web/
+    }
+    expect(textOf(page.querySelector(".home-shot-link"))).toBe("Live app");
+  });
+
+  it("stays a still under reduced motion, with nothing to pause", () => {
+    motion(true);
+    const page = mount(offline());
+    const video = page.querySelector<HTMLVideoElement>(".home-shot video")!;
+    expect(video.autoplay).toBe(false);
+    expect(video.getAttribute("preload")).toBe("none");
+    expect(video.getAttribute("poster")).toBe(HOME_SHOT.poster);
+    expect(page.querySelector(".home-shot-pause")).toBeNull();
+  });
+
+  it("pauses and plays again from its own button, which follows the video (WCAG 2.2.2)", () => {
+    motion(false);
+    const page = mount(offline());
+    const video = page.querySelector<HTMLVideoElement>(".home-shot video")!;
+    let paused = true;
+    Object.defineProperty(video, "paused", { get: () => paused });
+    const fire = (type: "play" | "pause") => {
+      paused = type === "pause";
+      act(() => {
+        video.dispatchEvent(new Event(type));
+      });
+    };
+    const pause = vi.spyOn(video, "pause").mockImplementation(() => fire("pause"));
+    const play = vi.spyOn(video, "play").mockImplementation(() => {
+      fire("play");
+      return Promise.resolve();
+    });
+    const button = page.querySelector<HTMLButtonElement>("button.home-shot-pause")!;
+    expect(button.closest("a")).toBeNull();
+    expect(button.getAttribute("aria-label")).toBe("Pause the loop");
+    // Until the video plays (autoplay may be refused), the button says it is paused.
+    expect(button.getAttribute("aria-pressed")).toBe("true");
+    fire("play");
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+    act(() => button.click());
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(button.getAttribute("aria-pressed")).toBe("true");
+    act(() => button.click());
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+    expect(button.getAttribute("aria-label")).toBe("Pause the loop"); // one name; the state is pressed
+    expect(doors.get().door).toBe("home"); // the pause never opens the story
+  });
+
+  it("opens the same story as the primary button, and leaves a modified click to the browser", () => {
+    motion(false);
+    const page = mount(offline());
+    const shot = page.querySelector<HTMLAnchorElement>("a.home-shot-link")!;
+    expect(shot.getAttribute("href")).toBe("/?tour=quick");
+    // The visible tag starts its name (WCAG 2.5.3), then what it does.
+    expect(shot.getAttribute("aria-label")).toBe("Live app. Watch the look (60 s)");
+    const modified = new MouseEvent("click", { bubbles: true, cancelable: true, metaKey: true });
+    act(() => {
+      shot.dispatchEvent(modified);
+    });
+    expect(modified.defaultPrevented).toBe(false);
+    expect(doors.get().door).toBe("home");
+    click(shot);
+    expect(doors.get().door).toBe("look");
+    expect(tour.get()).toMatchObject({ open: true, kind: "quick" });
   });
 });
 
