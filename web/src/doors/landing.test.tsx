@@ -19,7 +19,17 @@ import { applyDeepLink, doorOf, parseDeepLink } from "../deeplink";
 import { journey } from "../journey/state";
 import { EXAMPLE_PLAN } from "../plan/example";
 import { createSession, SessionContext, type Session } from "../session";
-import { API, fakeFetch, health, json, PRESS_MOMENT, pressureExport, settle } from "../testing";
+import { createApi } from "../api/client";
+import {
+  API,
+  breakdownResponse,
+  fakeFetch,
+  health,
+  json,
+  PRESS_MOMENT,
+  pressureExport,
+  settle,
+} from "../testing";
 import { stepThroughOf } from "../steps/controller";
 import { closeTour, tour } from "../tour/tourState";
 import { extraLooksOf, parseExtraLooks } from "../without/extra";
@@ -47,6 +57,19 @@ vi.mock("../session", async (original) => ({
 
 const hero = parseHero(raw);
 const offline = () => createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson);
+/** A session with the live service's speech, so the Sound switch can turn on. */
+const online = () =>
+  createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, {
+    api: createApi(
+      API,
+      "blind_side_run-3",
+      fakeFetch({
+        "POST /api/breakdowns": () => json(breakdownResponse()),
+        "POST /api/tts": () => new Response(new Blob(["RIFF"], { type: "audio/wav" })),
+      }),
+    ),
+    makeAudio: () => ({ play: async () => {}, pause() {}, onended: null }),
+  });
 const mounted: { root: Root; container: HTMLElement }[] = [];
 
 beforeEach(() => {
@@ -195,6 +218,45 @@ describe("the landing page", () => {
     expect(primary.isConnected).toBe(false);
     act(() => closeTour());
     expect(document.activeElement).toBe(page.querySelector(".stage-head h1"));
+  });
+});
+
+describe("Watch the look, with sound", () => {
+  it("keeps its words and says it plays with sound", () => {
+    const page = mount(online());
+    const primary = page.querySelector<HTMLButtonElement>(".door-home .btn-primary")!;
+    expect(textOf(primary)).toBe("Watch the look (60 s)");
+    expect(primary.title).toMatch(/with sound$/);
+  });
+
+  it("never turns the sound on by itself: loading the page leaves it off", () => {
+    const session = online();
+    mount(session);
+    expect(session.voice.sound.get()).toEqual({ on: false, asked: false });
+  });
+
+  it("turns the sound on from the tap when it has never been on", () => {
+    const session = online();
+    const page = mount(session);
+    act(() => page.querySelector<HTMLButtonElement>(".door-home .btn-primary")!.click());
+    expect(session.voice.sound.get().on).toBe(true);
+    expect(tour.get()).toMatchObject({ open: true, kind: "quick" });
+  });
+
+  it("leaves a mute alone: on once, then off, stays off", () => {
+    const session = online();
+    session.controls.setSound(true);
+    session.controls.setSound(false);
+    const page = mount(session);
+    act(() => page.querySelector<HTMLButtonElement>(".door-home .btn-primary")!.click());
+    expect(session.voice.sound.get()).toEqual({ on: false, asked: true });
+  });
+
+  it("does the same from the loop beside it", () => {
+    const session = online();
+    const page = mount(session);
+    click(page.querySelector<HTMLAnchorElement>("a.home-shot-link")!);
+    expect(session.voice.sound.get().on).toBe(true);
   });
 });
 

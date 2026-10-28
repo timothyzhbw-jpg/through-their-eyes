@@ -359,6 +359,30 @@ export function ComparePanel() {
           </article>
         )}
       </div>
+      {hero.counterfactual && hero.keyScan && hero.scenario === "blind_side_run" && (
+        <details className="journey-seeds">
+          <summary>Not one cherry-picked moment: the same scenario on eight other seeds</summary>
+          <figure>
+            <a href={SEED_GALLERY} target="_blank" rel="noreferrer">
+              <img
+                src={SEED_GALLERY}
+                width="1600"
+                height="900"
+                loading="lazy"
+                alt="Eight boards of the same simulated scenario, each on another seed at his decision: his key scan as a gold cone, his pass with it as a gold arrow, and the same seconds re-simulated without it as a dashed arrow, or a dashed ring where he keeps the ball. On all but one of them, with the look he passes to the runner and without it he plays another pass or keeps the ball; on the last he makes the same pass either way. Synthetic players, fictional teams."
+              />
+            </a>
+            <figcaption className="note">
+              Every fifth held-out seed, at his decision: the look the comparison removes (gold
+              cone), his pass with it (gold) and the same seconds re-simulated without it (dashed).
+              Seeds where nothing changes are shown too.{" "}
+              <a href={SEED_REPORT_URL} target="_blank" rel="noreferrer">
+                Every seed, one by one
+              </a>
+            </figcaption>
+          </figure>
+        </details>
+      )}
       {!hero.counterfactual && (
         <p className="note">This moment has no re-simulated run to compare it with.</p>
       )}
@@ -427,6 +451,12 @@ function TheLook() {
 }
 
 const REMOVED_LOOK = "removed_look"; // explain/look_cost.py: which look the comparison removes
+
+/** The blind-side run on eight held-out seeds, each board at his decision, with the look and
+ * without it (eval/seed_gallery.py's docs/hero-seeds.png, copied). */
+export const SEED_GALLERY = `${import.meta.env.BASE_URL}img/seeds/hero-seeds.png`;
+const SEED_REPORT_URL =
+  "https://github.com/timothyzhbw-jpg/through-their-eyes/blob/main/eval/reports/hero_flip_blind_side_run.md";
 
 // ---------- A · AI Tactical Broadcast ----------
 

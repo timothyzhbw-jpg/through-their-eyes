@@ -8,7 +8,7 @@
 // sections in about a minute. Door 1's compare (the old Event step) tells both runs from their
 // verified lines.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -30,7 +30,7 @@ import { settingsMenu } from "../ui/Stage";
 import { withoutLookOf } from "../without/without";
 import { optionLabel, personLookup, personOf, tagOf } from "../steps/story";
 import { DEMO_DATA, FACTS_VS_FIGURES } from "./DemoBadge";
-import { ASK_RUN_ID, ComparePanel, Journey } from "./Journey";
+import { ASK_RUN_ID, ComparePanel, Journey, SEED_GALLERY } from "./Journey";
 import { COST_PER_VERIFIED_BREAKDOWN } from "./measured";
 import { journey } from "./state";
 import { eventIndex, STADIUM_MOMENTS, stadiumEventFor } from "./stadium";
@@ -403,6 +403,48 @@ describe("the bar and its panels", () => {
     expect(container.querySelector(".journey-compare-summary")).toBeNull();
     expect(container.textContent).not.toContain("The look:");
     expect(container.textContent).not.toContain("The result:");
+  });
+
+  it("folds the same scenario on eight other seeds under the compare, with every seed's report", () => {
+    const { container } = mount(<ComparePanel />);
+    const seeds = container.querySelector<HTMLDetailsElement>("details.journey-seeds")!;
+    expect(seeds).not.toBeNull();
+    expect(seeds.open).toBe(false);
+    expect(seeds.querySelector("summary")?.textContent).toBe(
+      "Not one cherry-picked moment: the same scenario on eight other seeds",
+    );
+    const img = seeds.querySelector("figure img")!;
+    expect(img.getAttribute("src")).toBe(SEED_GALLERY);
+    expect(SEED_GALLERY).toMatch(/img\/seeds\/hero-seeds\.png$/);
+    expect(img.getAttribute("width")).toBe("1600");
+    expect(img.getAttribute("height")).toBe("900");
+    expect(img.getAttribute("loading")).toBe("lazy");
+    expect(img.getAttribute("alt")).toMatch(/^Eight boards of the same simulated scenario/);
+    const link = seeds.querySelector<HTMLAnchorElement>("figcaption a")!;
+    expect(link.textContent).toBe("Every seed, one by one");
+    expect(link.getAttribute("href")).toBe(
+      "https://github.com/timothyzhbw-jpg/through-their-eyes/blob/main/eval/reports/hero_flip_blind_side_run.md",
+    );
+    expect(link.target).toBe("_blank");
+    expect(link.rel).toBe("noreferrer");
+    // New copy carries no figures: the numbers are in the picture and the report.
+    expect(seeds.querySelector("summary")!.textContent).not.toMatch(/\d/);
+    expect(seeds.querySelector("figcaption")!.textContent).not.toMatch(/\d/);
+    expect(img.getAttribute("alt")).not.toMatch(/\d/);
+  });
+
+  it("shows the seed gallery only for the blind-side run with its key look", () => {
+    const other = mount(<ComparePanel />, { ...hero, scenario: "press_escape" }).container;
+    expect(other.querySelector(".journey-seeds")).toBeNull();
+    const noKey = mount(<ComparePanel />, { ...hero, keyScan: null }).container;
+    expect(noKey.querySelector(".journey-seeds")).toBeNull();
+  });
+
+  it("ships the seed gallery's picture with the build", () => {
+    const file = `public${SEED_GALLERY}`; // vitest runs in web/, with the base at "/"
+    expect(statSync(file).size).toBeGreaterThan(10_000);
+    const head = readFileSync(file).subarray(0, 8); // the PNG signature
+    expect([...head]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   });
 
   it("introduces the simulation only when the counterfactual removes the hero's key look", () => {

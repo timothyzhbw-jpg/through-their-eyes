@@ -20,6 +20,7 @@ import type { Vec2 } from "../data/types";
 import { SessionContext, useBreakdown, useSession } from "../session";
 import { useStore } from "../store/store";
 import { KindTag } from "../ui/Narration";
+import { ShareChallenge } from "../ui/ShareChallenge";
 import { PovView } from "../views/PovView";
 import { LANGUAGES, type Language } from "../whatif/whatif";
 import { declutter, frameCall, markerAt, project, swipePick, toWorld } from "./camera";
@@ -590,6 +591,12 @@ function Card({ yc, pickByKeyboard }: { yc: YourCall; pickByKeyboard: () => void
           <button type="button" className="btn btn-quiet" onClick={yc.skip}>
             Skip to the comparison
           </button>
+        )}
+        {beat === "compare" && (
+          <ShareChallenge
+            action="?play=yourcall"
+            text="Make his call: decide with only what he knew."
+          />
         )}
         {back}
       </div>
