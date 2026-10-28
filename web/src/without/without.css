@@ -84,7 +84,8 @@
 /* what his look is compared with: the run without it, or with two more (no blur, no motion) */
 .compare-switch {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* both options on one line: in the tour's card the second one wrapped */
+  max-width: 100%;
   gap: 4px;
   padding: 3px;
   border-radius: var(--r-control);
@@ -97,9 +98,10 @@
   background: transparent;
   cursor: pointer;
   min-height: 32px;
-  padding: 0 14px;
+  padding: 0 10px;
   border-radius: var(--r-control);
-  font: 500 13px/1 var(--font-body);
+  font: 500 12px/1 var(--font-body);
+  white-space: nowrap;
   color: var(--chalk-2);
 }
 .compare-switch button:hover {

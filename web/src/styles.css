@@ -3446,6 +3446,11 @@ optgroup {
 .legend i.dashed {
   border: 1px dashed var(--chalk);
 }
+/* The landing and Your turn have no pitch: no pitch key (the landing has its own fictional note). */
+.app[data-door="home"] > .legend,
+.app[data-door="turn"] > .legend {
+  display: none;
+}
 
 /* ---------- a tablet: the bar wraps, the story keeps two columns ---------- */
 @media (max-width: 1100px) {
@@ -4059,6 +4064,17 @@ optgroup {
   /* one live stat at a time, the last listed (an event, else a sprint, else the carrier): three
      covered most of a 320 px picture */
   .stage-ticker .stat-chip:has(+ .stat-chip) {
+    display: none;
+  }
+}
+/* A phone's caption sits over the board's lower half (in the picture's grid area): it takes a
+   near-opaque plate so its lines read over the board's labels, and the blind-side tag, a chip on
+   the board that met the caption's chips, waits until the caption is down. Player labels stay. */
+@media (max-width: 760px) {
+  .stage-caption .caption:has(.caption-text) {
+    background: rgba(8, 14, 11, 0.88);
+  }
+  .stage:has(.stage-caption .caption-text) .blind-tag {
     display: none;
   }
 }
