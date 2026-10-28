@@ -369,7 +369,7 @@ export function ComparePanel() {
                 width="1600"
                 height="900"
                 loading="lazy"
-                alt="Eight boards of the same simulated scenario, each on another seed at his decision: his key scan as a gold cone, his pass with it as a gold arrow, and the same seconds re-simulated without it as a dashed arrow, or a dashed ring where he keeps the ball. On all but one of them, with the look he passes to the runner and without it he plays another pass or keeps the ball; on the last he makes the same pass either way. Synthetic players, fictional teams."
+                alt="Eight boards of the same simulated scenario, each on another seed at his decision: his key scan as a gold cone, his pass with it as a gold arrow, and the same seconds re-simulated without it as a dashed arrow, or a dashed ring where he keeps the ball. On all but one of them, with the look he passes to the runner and without it he plays another pass or keeps the ball; on the third he makes the same pass either way. Synthetic players, fictional teams."
               />
             </a>
             <figcaption className="note">
@@ -448,7 +448,7 @@ function TheLook() {
   const line = narration?.lines.find((l) => l.id === REMOVED_LOOK);
   if (!line) return null;
   return (
-    <p className="journey-look" lang={language}>
+    <p className="journey-look" lang={data?.answers[language] ? language : "en"}>
       <LineText text={line.text} verified claims={lineClaims(narration!, line)} />
     </p>
   );

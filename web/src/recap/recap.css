@@ -249,12 +249,6 @@
 .recap-card.full-time {
   margin-top: 12px;
 }
-/* The full-time card says the result: the live score bug above it (still on the stream's first
-   frame, 0 – 0) goes while it shows. */
-.scoreboard:has(~ .recap-card.full-time) {
-  display: none;
-}
-
 .recap-card.intro .recap-score-line,
 .recap-card.full-time .recap-score-line {
   font-size: 22px;

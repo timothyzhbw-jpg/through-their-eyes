@@ -67,14 +67,14 @@ function online() {
   return { session, tts };
 }
 
-async function mount(session: Session) {
+async function mount(session: Session, speak = true) {
   const container = document.createElement("div");
   document.body.append(container);
   const root = createRoot(container);
   await act(async () => {
     root.render(
       <SessionContext.Provider value={session}>
-        <StepLines say="look" />
+        <StepLines say="look" speak={speak} />
       </SessionContext.Provider>,
     );
     for (let k = 0; k < 3; k++) await new Promise((r) => setTimeout(r, 0));
@@ -90,6 +90,13 @@ describe("the tour card's line, with sound", () => {
     const card = await mount(session);
     expect(card.querySelector(".tour-line")).not.toBeNull();
     expect(tts).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays silent outside the tour card (the look panel shows the same line)", async () => {
+    const { session, tts } = online();
+    session.controls.setSound(true);
+    await mount(session, false);
+    expect(tts).not.toHaveBeenCalled();
   });
 
   it("stays silent while the Sound switch is off", async () => {

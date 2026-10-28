@@ -203,6 +203,8 @@ export interface Api {
   readonly base: string;
   readonly match: string;
   health(timeoutMs?: number): Promise<z.infer<typeof Health>>;
+  /** The last health answer's speech flag: whether the service speaks; null before one. */
+  speaks(): boolean | null;
   matches(): Promise<MatchList>;
   info(timeoutMs?: number): Promise<MatchInfoResponse>;
   exportJson(timeoutMs?: number): Promise<unknown>;
@@ -309,12 +311,17 @@ export function createApi(
     body: JSON.stringify(body),
   });
   const id = encodeURIComponent(match);
+  let speech: boolean | null = null; // from the last health answer
 
   return {
     base,
     match,
     health: (ms = PROBE_TIMEOUT_MS) =>
-      call("/health", {}, ms, json(Health)) as Promise<z.infer<typeof Health>>,
+      (call("/health", {}, ms, json(Health)) as Promise<z.infer<typeof Health>>).then((h) => {
+        speech = h.speech;
+        return h;
+      }),
+    speaks: () => speech,
     matches: () =>
       call("/api/matches", {}, PROBE_TIMEOUT_MS, json(MatchList)) as Promise<MatchList>,
     info: (ms = EXPORT_TIMEOUT_MS) =>

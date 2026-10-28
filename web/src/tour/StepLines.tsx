@@ -31,7 +31,7 @@ function narrationLine(narration: Narration | null, say: SayName): PayloadLine |
   return narration.lines.find((l) => l.id === id) ?? null;
 }
 
-export function StepLines({ say }: { say: SayName }) {
+export function StepLines({ say, speak = false }: { say: SayName; speak?: boolean }) {
   const session = useSession();
   const { narration, status, voice } = useBreakdown();
   const bundled = useStore(withoutLookOf(session).state, (s) => s.data);
@@ -40,9 +40,9 @@ export function StepLines({ say }: { say: SayName }) {
     bundled && (say === "without" || say === "compare") ? null : narrationLine(narration, say);
   const toldId = told?.id ?? null;
   useEffect(() => {
-    if (!toldId || !soundOn) return;
+    if (!speak || !toldId || !soundOn) return;
     void session.voice.say(voice.find((c) => c.line === toldId));
-  }, [toldId, soundOn, voice, session]);
+  }, [speak, toldId, soundOn, voice, session]);
   // The run without the look, told by its bundled lines where the moment has them.
   if (bundled && say === "without") {
     return (
@@ -67,18 +67,22 @@ export function StepLines({ say }: { say: SayName }) {
   const verified = isVerified(narration!, line);
   return (
     <div className="tour-lines">
-      <p className="tour-line">
+      <p className="tour-line" lang={narration!.payload.language}>
         <LineText text={line.text} verified={verified} claims={lineClaims(narration!, line)} />
         {verified ? (
           <span
             className="tour-checked"
+            lang="en"
             title="Verified: every number in it was checked against the match data"
           >
             <CheckIcon />
             <span className="sr-only"> verified</span>
           </span>
         ) : (
-          <span className="tour-sample"> · sample, not checked</span>
+          <span className="tour-sample" lang="en">
+            {" "}
+            · sample, not checked
+          </span>
         )}
       </p>
     </div>

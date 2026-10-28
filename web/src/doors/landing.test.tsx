@@ -57,19 +57,23 @@ vi.mock("../session", async (original) => ({
 
 const hero = parseHero(raw);
 const offline = () => createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson);
-/** A session with the live service's speech, so the Sound switch can turn on. */
-const online = () =>
-  createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, {
+/** A session with the live service, whose health answer says whether it speaks. */
+const online = async (speech = true) => {
+  const session = createSession(hero, EXAMPLE_PLAN, payloadJson, whatIfJson, {
     api: createApi(
       API,
       "blind_side_run-3",
       fakeFetch({
+        "GET /health": () => json({ status: "ok", version: "t", model: "offline", speech }),
         "POST /api/breakdowns": () => json(breakdownResponse()),
         "POST /api/tts": () => new Response(new Blob(["RIFF"], { type: "audio/wav" })),
       }),
     ),
     makeAudio: () => ({ play: async () => {}, pause() {}, onended: null }),
   });
+  await session.api!.health();
+  return session;
+};
 const mounted: { root: Root; container: HTMLElement }[] = [];
 
 beforeEach(() => {
@@ -222,29 +226,29 @@ describe("the landing page", () => {
 });
 
 describe("Watch the look, with sound", () => {
-  it("keeps its words and says it plays with sound", () => {
-    const page = mount(online());
+  it("keeps its words and says it plays with sound", async () => {
+    const page = mount(await online());
     const primary = page.querySelector<HTMLButtonElement>(".door-home .btn-primary")!;
     expect(textOf(primary)).toBe("Watch the look (60 s)");
     expect(primary.title).toMatch(/with sound$/);
   });
 
-  it("never turns the sound on by itself: loading the page leaves it off", () => {
-    const session = online();
+  it("never turns the sound on by itself: loading the page leaves it off", async () => {
+    const session = await online();
     mount(session);
     expect(session.voice.sound.get()).toEqual({ on: false, asked: false });
   });
 
-  it("turns the sound on from the tap when it has never been on", () => {
-    const session = online();
+  it("turns the sound on from the tap when it has never been on", async () => {
+    const session = await online();
     const page = mount(session);
     act(() => page.querySelector<HTMLButtonElement>(".door-home .btn-primary")!.click());
     expect(session.voice.sound.get().on).toBe(true);
     expect(tour.get()).toMatchObject({ open: true, kind: "quick" });
   });
 
-  it("leaves a mute alone: on once, then off, stays off", () => {
-    const session = online();
+  it("leaves a mute alone: on once, then off, stays off", async () => {
+    const session = await online();
     session.controls.setSound(true);
     session.controls.setSound(false);
     const page = mount(session);
@@ -252,8 +256,16 @@ describe("Watch the look, with sound", () => {
     expect(session.voice.sound.get()).toEqual({ on: false, asked: true });
   });
 
-  it("does the same from the loop beside it", () => {
-    const session = online();
+  it("leaves the sound off where the service does not speak", async () => {
+    const session = await online(false);
+    const page = mount(session);
+    act(() => page.querySelector<HTMLButtonElement>(".door-home .btn-primary")!.click());
+    expect(session.voice.sound.get()).toEqual({ on: false, asked: false });
+    expect(tour.get()).toMatchObject({ open: true, kind: "quick" });
+  });
+
+  it("does the same from the loop beside it", async () => {
+    const session = await online();
     const page = mount(session);
     click(page.querySelector<HTMLAnchorElement>("a.home-shot-link")!);
     expect(session.voice.sound.get().on).toBe(true);

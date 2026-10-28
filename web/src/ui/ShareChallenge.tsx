@@ -46,7 +46,7 @@ export function ShareChallenge({ action, text }: { action: string; text: string 
       <button type="button" className="btn btn-quiet" onClick={() => void share()}>
         Challenge a friend
       </button>{" "}
-      <span className="share-status" role="status">
+      <span className="share-status" role="status" style={{ overflowWrap: "anywhere" }}>
         {status.copied ? "Link copied" : status.url ? `Copy this link: ${status.url}` : ""}
       </span>
     </span>
