@@ -1,0 +1,311 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" font-family="Inter, Segoe UI, Helvetica, sans-serif">
+<style>.title{font:600 34px Inter,-apple-system,Segoe UI,Helvetica,sans-serif;fill:#efede5}.sub{font:400 17px Inter,-apple-system,Segoe UI,Helvetica,sans-serif;fill:#a9a79f}.seedno{font:600 15px Inter,-apple-system,Segoe UI,Helvetica,sans-serif;fill:#efede5}.cap{font:500 13.5px Inter,-apple-system,Segoe UI,Helvetica,sans-serif}.tag{font:600 12px Inter,-apple-system,Segoe UI,Helvetica,sans-serif;fill:#efede5}</style>
+<defs><marker id="head-with" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#f5c542"/></marker><marker id="head-without" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#ff7a93"/></marker></defs>
+<rect width="1600" height="900" fill="#0b0f0c"/>
+<text x="35.8" y="56" class="title">Not one cherry-picked moment</text>
+<text x="35.8" y="88" class="sub">The same simulated scenario on every fifth held-out seed (100–135), at H8's decision: his key scan (<tspan fill="#f5c542">gold cone</tspan>), his pass with it (<tspan fill="#f5c542">gold arrow</tspan>)</text>
+<text x="35.8" y="112" class="sub">and the same seconds re-simulated without it (<tspan fill="#ff7a93">dashed; a dashed ring when he keeps the ball</tspan>). H9, the runner, in gold. Synthetic players, fictional teams.</text>
+<g class="seed" data-seed="100" data-factual="pass:H9" data-counterfactual="pass:H7">
+<clipPath id="clip100"><rect x="35.8" y="140.0" width="355.2" height="333.2" rx="10"/></clipPath>
+<g clip-path="url(#clip100)">
+<rect x="35.8" y="140.0" width="355.2" height="333.2" fill="#12301f"/>
+<line x1="133.8" y1="140.0" x2="133.8" y2="473.2" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<circle cx="133.8" cy="306.6" r="44.8" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="310.2" y="207.8" width="80.9" height="197.6" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="387.1" y="288.7" width="4" height="35.9" fill="#efede5" opacity="0.8"/>
+<polygon points="139.4,355.6 285.5,371.8 286.4,358.6 286.0,345.2 284.5,332.0 281.8,319.0 277.9,306.3 272.8,293.9 266.7,282.1 259.5,270.9 251.4,260.4 242.3,250.7 232.4,241.8 221.7,233.8 210.3,226.9 198.4,221.0 186.0,216.2 173.2,212.6 160.1,210.1 146.8,208.8 133.5,208.8 120.3,209.9 107.1,212.2 94.3,215.7 81.8,220.4" fill="#f5c542" fill-opacity="0.14" stroke="#f5c542" stroke-opacity="0.45" stroke-width="1"/>
+<line x1="137.9" y1="355.6" x2="205.0" y2="445.8" stroke="#ff7a93" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 6" marker-end="url(#head-without)"/>
+<line x1="137.9" y1="355.6" x2="322.8" y2="367.6" stroke="#f5c542" stroke-width="3" stroke-linecap="round" marker-end="url(#head-with)"/>
+<circle cx="-51.7" cy="320.4" r="5.5" fill="#f08a4b"/>
+<circle cx="118.5" cy="432.6" r="5.5" fill="#f08a4b"/>
+<circle cx="125.5" cy="182.7" r="5.5" fill="#f08a4b"/>
+<circle cx="50.5" cy="353.7" r="5.5" fill="#f08a4b"/>
+<circle cx="50.2" cy="260.0" r="5.5" fill="#f08a4b"/>
+<circle cx="106.4" cy="303.8" r="5.5" fill="#f08a4b"/>
+<circle cx="139.4" cy="355.6" r="5.5" fill="#f08a4b" stroke="#efede5" stroke-width="2.5"/>
+<text x="147.4" y="348.6" class="tag">H8</text>
+<circle cx="190.1" cy="240.8" r="5.5" fill="#f08a4b"/>
+<circle cx="225.9" cy="446.5" r="5.5" fill="#f08a4b"/>
+<circle cx="236.1" cy="185.2" r="5.5" fill="#f08a4b"/>
+<circle cx="279.3" cy="341.0" r="5.5" fill="#f5c542"/>
+<text x="287.3" y="334.0" class="tag">H9</text>
+<circle cx="367.5" cy="311.4" r="5.5" fill="#4f86f7"/>
+<circle cx="279.4" cy="207.7" r="5.5" fill="#4f86f7"/>
+<circle cx="274.9" cy="420.3" r="5.5" fill="#4f86f7"/>
+<circle cx="286.9" cy="267.0" r="5.5" fill="#4f86f7"/>
+<circle cx="244.8" cy="319.5" r="5.5" fill="#4f86f7"/>
+<circle cx="216.3" cy="282.8" r="5.5" fill="#4f86f7"/>
+<circle cx="186.2" cy="338.8" r="5.5" fill="#4f86f7"/>
+<circle cx="166.5" cy="288.0" r="5.5" fill="#4f86f7"/>
+<circle cx="148.4" cy="208.5" r="5.5" fill="#4f86f7"/>
+<circle cx="141.8" cy="407.3" r="5.5" fill="#4f86f7"/>
+<circle cx="100.8" cy="310.5" r="5.5" fill="#4f86f7"/>
+</g>
+<text x="35.8" y="494.2" class="cap"><tspan class="seedno">Seed 100</tspan>  <tspan fill="#f5c542">with the scan: passes to H9</tspan><tspan fill="#a9a79f"> · </tspan><tspan fill="#ff7a93">without: passes to H7</tspan></text>
+</g>
+<g class="seed" data-seed="105" data-factual="pass:H9" data-counterfactual="pass:H4">
+<clipPath id="clip105"><rect x="426.9" y="140.0" width="355.2" height="333.2" rx="10"/></clipPath>
+<g clip-path="url(#clip105)">
+<rect x="426.9" y="140.0" width="355.2" height="333.2" fill="#12301f"/>
+<line x1="524.9" y1="140.0" x2="524.9" y2="473.2" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<circle cx="524.9" cy="306.6" r="44.8" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="701.2" y="207.8" width="80.9" height="197.6" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="778.1" y="288.7" width="4" height="35.9" fill="#efede5" opacity="0.8"/>
+<polygon points="541.3,355.3 687.1,374.0 688.2,360.6 688.1,347.3 686.7,333.9 684.2,320.8 680.5,308.0 675.6,295.5 669.6,283.5 662.5,272.2 654.5,261.5 645.5,251.6 635.6,242.6 625.0,234.4 613.6,227.3 601.7,221.3 589.3,216.4 576.4,212.6 563.3,210.0 550.0,208.6 536.6,208.4 523.3,209.4 510.1,211.7 497.2,215.1 484.6,219.7" fill="#f5c542" fill-opacity="0.14" stroke="#f5c542" stroke-opacity="0.45" stroke-width="1"/>
+<line x1="539.8" y1="355.3" x2="441.4" y2="352.1" stroke="#ff7a93" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 6" marker-end="url(#head-without)"/>
+<line x1="539.8" y1="355.3" x2="735.1" y2="370.2" stroke="#f5c542" stroke-width="3" stroke-linecap="round" marker-end="url(#head-with)"/>
+<circle cx="338.8" cy="319.7" r="5.5" fill="#f08a4b"/>
+<circle cx="505.8" cy="439.7" r="5.5" fill="#f08a4b"/>
+<circle cx="513.7" cy="182.0" r="5.5" fill="#f08a4b"/>
+<circle cx="441.4" cy="352.1" r="5.5" fill="#f08a4b"/>
+<circle cx="444.9" cy="265.1" r="5.5" fill="#f08a4b"/>
+<circle cx="500.0" cy="306.9" r="5.5" fill="#f08a4b"/>
+<circle cx="541.3" cy="355.3" r="5.5" fill="#f08a4b" stroke="#efede5" stroke-width="2.5"/>
+<text x="549.3" y="348.3" class="tag">H8</text>
+<circle cx="580.1" cy="238.9" r="5.5" fill="#f08a4b"/>
+<circle cx="616.9" cy="442.4" r="5.5" fill="#f08a4b"/>
+<circle cx="624.1" cy="178.2" r="5.5" fill="#f08a4b"/>
+<circle cx="670.6" cy="343.3" r="5.5" fill="#f5c542"/>
+<text x="678.6" y="336.3" class="tag">H9</text>
+<circle cx="758.6" cy="311.5" r="5.5" fill="#4f86f7"/>
+<circle cx="677.7" cy="210.4" r="5.5" fill="#4f86f7"/>
+<circle cx="672.5" cy="418.5" r="5.5" fill="#4f86f7"/>
+<circle cx="676.2" cy="271.6" r="5.5" fill="#4f86f7"/>
+<circle cx="605.1" cy="343.8" r="5.5" fill="#4f86f7"/>
+<circle cx="613.5" cy="279.3" r="5.5" fill="#4f86f7"/>
+<circle cx="620.0" cy="311.7" r="5.5" fill="#4f86f7"/>
+<circle cx="552.8" cy="295.4" r="5.5" fill="#4f86f7"/>
+<circle cx="540.5" cy="213.0" r="5.5" fill="#4f86f7"/>
+<circle cx="528.7" cy="408.6" r="5.5" fill="#4f86f7"/>
+<circle cx="490.5" cy="319.9" r="5.5" fill="#4f86f7"/>
+</g>
+<text x="426.9" y="494.2" class="cap"><tspan class="seedno">Seed 105</tspan>  <tspan fill="#f5c542">with the scan: passes to H9</tspan><tspan fill="#a9a79f"> · </tspan><tspan fill="#ff7a93">without: passes to H4</tspan></text>
+</g>
+<g class="seed" data-seed="110" data-factual="pass:H4" data-counterfactual="pass:H4">
+<clipPath id="clip110"><rect x="817.9" y="140.0" width="355.2" height="333.2" rx="10"/></clipPath>
+<g clip-path="url(#clip110)">
+<rect x="817.9" y="140.0" width="355.2" height="333.2" fill="#12301f"/>
+<line x1="915.9" y1="140.0" x2="915.9" y2="473.2" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<circle cx="915.9" cy="306.6" r="44.8" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="1092.3" y="207.8" width="80.9" height="197.6" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="1169.2" y="288.7" width="4" height="35.9" fill="#efede5" opacity="0.8"/>
+<polygon points="924.8,355.1 1071.1,368.9 1071.8,355.6 1071.2,342.3 1069.5,329.1 1066.5,316.1 1062.4,303.4 1057.1,291.1 1050.8,279.4 1043.4,268.3 1035.1,257.9 1025.8,248.3 1015.7,239.6 1004.9,231.8 993.3,225.0 981.3,219.4 968.7,214.8 955.8,211.4 942.7,209.2 929.4,208.1 916.1,208.3 902.8,209.7 889.7,212.3 876.9,216.1 864.5,221.0" fill="#f5c542" fill-opacity="0.14" stroke="#f5c542" stroke-opacity="0.45" stroke-width="1"/>
+<line x1="923.3" y1="355.0" x2="827.1" y2="348.7" stroke="#f5c542" stroke-width="3" stroke-linecap="round" marker-end="url(#head-with)"/>
+<circle cx="724.5" cy="319.0" r="5.5" fill="#f08a4b"/>
+<circle cx="899.7" cy="439.8" r="5.5" fill="#f08a4b"/>
+<circle cx="905.4" cy="180.8" r="5.5" fill="#f08a4b"/>
+<circle cx="827.1" cy="348.7" r="5.5" fill="#f08a4b"/>
+<circle cx="835.7" cy="259.7" r="5.5" fill="#f08a4b"/>
+<circle cx="886.3" cy="302.9" r="5.5" fill="#f08a4b"/>
+<circle cx="924.8" cy="355.1" r="5.5" fill="#f08a4b" stroke="#efede5" stroke-width="2.5"/>
+<text x="932.8" y="348.1" class="tag">H8</text>
+<circle cx="966.2" cy="238.9" r="5.5" fill="#f08a4b"/>
+<circle cx="1000.2" cy="445.9" r="5.5" fill="#f08a4b"/>
+<circle cx="1019.7" cy="182.4" r="5.5" fill="#f08a4b"/>
+<circle cx="1057.9" cy="336.2" r="5.5" fill="#f5c542"/>
+<text x="1065.9" y="329.2" class="tag">H9</text>
+<circle cx="1149.6" cy="311.4" r="5.5" fill="#4f86f7"/>
+<circle cx="1063.7" cy="215.1" r="5.5" fill="#4f86f7"/>
+<circle cx="1064.9" cy="420.9" r="5.5" fill="#4f86f7"/>
+<circle cx="1064.2" cy="273.4" r="5.5" fill="#4f86f7"/>
+<circle cx="1010.8" cy="333.3" r="5.5" fill="#4f86f7"/>
+<circle cx="1002.9" cy="284.2" r="5.5" fill="#4f86f7"/>
+<circle cx="998.7" cy="311.6" r="5.5" fill="#4f86f7"/>
+<circle cx="947.6" cy="289.3" r="5.5" fill="#4f86f7"/>
+<circle cx="931.6" cy="205.8" r="5.5" fill="#4f86f7"/>
+<circle cx="925.3" cy="414.4" r="5.5" fill="#4f86f7"/>
+<circle cx="890.9" cy="308.0" r="5.5" fill="#4f86f7"/>
+</g>
+<text x="817.9" y="494.2" class="cap"><tspan class="seedno">Seed 110</tspan>  <tspan fill="#a9a79f">the same either way: passes to H4</tspan></text>
+</g>
+<g class="seed" data-seed="115" data-factual="pass:H9" data-counterfactual="pass:H7">
+<clipPath id="clip115"><rect x="1209.0" y="140.0" width="355.2" height="333.2" rx="10"/></clipPath>
+<g clip-path="url(#clip115)">
+<rect x="1209.0" y="140.0" width="355.2" height="333.2" fill="#12301f"/>
+<line x1="1307.0" y1="140.0" x2="1307.0" y2="473.2" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<circle cx="1307.0" cy="306.6" r="44.8" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="1483.4" y="207.8" width="80.9" height="197.6" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="1560.2" y="288.7" width="4" height="35.9" fill="#efede5" opacity="0.8"/>
+<polygon points="1319.0,354.4 1465.3,368.9 1466.0,355.6 1465.5,342.3 1463.8,329.1 1460.9,316.2 1456.9,303.5 1451.7,291.2 1445.5,279.5 1438.2,268.4 1429.9,257.9 1420.7,248.3 1410.7,239.5 1400.0,231.7 1388.6,224.9 1376.6,219.1 1364.1,214.5 1351.3,211.0 1338.2,208.6 1324.9,207.5 1311.6,207.6 1298.4,208.8 1285.3,211.3 1272.5,214.9 1260.1,219.7" fill="#f5c542" fill-opacity="0.14" stroke="#f5c542" stroke-opacity="0.45" stroke-width="1"/>
+<line x1="1317.5" y1="354.3" x2="1379.8" y2="448.7" stroke="#ff7a93" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 6" marker-end="url(#head-without)"/>
+<line x1="1317.5" y1="354.3" x2="1504.8" y2="362.0" stroke="#f5c542" stroke-width="3" stroke-linecap="round" marker-end="url(#head-with)"/>
+<circle cx="1120.6" cy="319.6" r="5.5" fill="#f08a4b"/>
+<circle cx="1290.8" cy="437.3" r="5.5" fill="#f08a4b"/>
+<circle cx="1298.3" cy="181.6" r="5.5" fill="#f08a4b"/>
+<circle cx="1222.8" cy="349.6" r="5.5" fill="#f08a4b"/>
+<circle cx="1229.5" cy="260.9" r="5.5" fill="#f08a4b"/>
+<circle cx="1280.3" cy="302.9" r="5.5" fill="#f08a4b"/>
+<circle cx="1319.0" cy="354.4" r="5.5" fill="#f08a4b" stroke="#efede5" stroke-width="2.5"/>
+<text x="1327.0" y="347.4" class="tag">H8</text>
+<circle cx="1365.1" cy="242.5" r="5.5" fill="#f08a4b"/>
+<circle cx="1402.6" cy="450.3" r="5.5" fill="#f08a4b"/>
+<circle cx="1411.8" cy="185.4" r="5.5" fill="#f08a4b"/>
+<circle cx="1451.7" cy="339.0" r="5.5" fill="#f5c542"/>
+<text x="1459.7" y="332.0" class="tag">H9</text>
+<circle cx="1540.7" cy="311.4" r="5.5" fill="#4f86f7"/>
+<circle cx="1456.5" cy="216.7" r="5.5" fill="#4f86f7"/>
+<circle cx="1448.2" cy="422.6" r="5.5" fill="#4f86f7"/>
+<circle cx="1464.4" cy="276.4" r="5.5" fill="#4f86f7"/>
+<circle cx="1391.6" cy="338.3" r="5.5" fill="#4f86f7"/>
+<circle cx="1393.2" cy="285.0" r="5.5" fill="#4f86f7"/>
+<circle cx="1393.7" cy="313.0" r="5.5" fill="#4f86f7"/>
+<circle cx="1338.8" cy="295.0" r="5.5" fill="#4f86f7"/>
+<circle cx="1322.9" cy="205.7" r="5.5" fill="#4f86f7"/>
+<circle cx="1307.8" cy="409.9" r="5.5" fill="#4f86f7"/>
+<circle cx="1275.7" cy="315.4" r="5.5" fill="#4f86f7"/>
+</g>
+<text x="1209.0" y="494.2" class="cap"><tspan class="seedno">Seed 115</tspan>  <tspan fill="#f5c542">with the scan: passes to H9</tspan><tspan fill="#a9a79f"> · </tspan><tspan fill="#ff7a93">without: passes to H7</tspan></text>
+</g>
+<g class="seed" data-seed="120" data-factual="pass:H9" data-counterfactual="pass:H1">
+<clipPath id="clip120"><rect x="35.8" y="519.2" width="355.2" height="333.2" rx="10"/></clipPath>
+<g clip-path="url(#clip120)">
+<rect x="35.8" y="519.2" width="355.2" height="333.2" fill="#12301f"/>
+<line x1="133.8" y1="519.2" x2="133.8" y2="852.4" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<circle cx="133.8" cy="685.8" r="44.8" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="310.2" y="587.0" width="80.9" height="197.6" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="387.1" y="667.9" width="4" height="35.9" fill="#efede5" opacity="0.8"/>
+<polygon points="144.6,731.6 290.2,751.7 291.4,738.5 291.4,725.1 290.3,711.8 287.9,698.7 284.3,685.9 279.6,673.4 273.8,661.4 266.9,650.0 259.0,639.3 250.2,629.3 240.5,620.1 230.0,611.9 218.8,604.6 207.0,598.4 194.6,593.3 181.9,589.4 168.9,586.6 155.6,585.0 142.3,584.6 129.0,585.4 115.8,587.4 102.9,590.6 90.3,594.9" fill="#f5c542" fill-opacity="0.14" stroke="#f5c542" stroke-opacity="0.45" stroke-width="1"/>
+<line x1="143.1" y1="731.6" x2="-40.7" y2="698.8" stroke="#ff7a93" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 6" marker-end="url(#head-without)"/>
+<line x1="143.1" y1="731.6" x2="329.7" y2="737.1" stroke="#f5c542" stroke-width="3" stroke-linecap="round" marker-end="url(#head-with)"/>
+<circle cx="-51.6" cy="698.6" r="5.5" fill="#f08a4b"/>
+<circle cx="115.2" cy="820.1" r="5.5" fill="#f08a4b"/>
+<circle cx="122.8" cy="555.9" r="5.5" fill="#f08a4b"/>
+<circle cx="50.6" cy="732.3" r="5.5" fill="#f08a4b"/>
+<circle cx="53.4" cy="641.8" r="5.5" fill="#f08a4b"/>
+<circle cx="102.7" cy="683.3" r="5.5" fill="#f08a4b"/>
+<circle cx="144.6" cy="731.6" r="5.5" fill="#f08a4b" stroke="#efede5" stroke-width="2.5"/>
+<text x="152.6" y="724.6" class="tag">H8</text>
+<circle cx="182.9" cy="614.0" r="5.5" fill="#f08a4b"/>
+<circle cx="220.8" cy="826.2" r="5.5" fill="#f08a4b"/>
+<circle cx="234.6" cy="557.2" r="5.5" fill="#f08a4b"/>
+<circle cx="276.5" cy="717.3" r="5.5" fill="#f5c542"/>
+<text x="284.5" y="710.3" class="tag">H9</text>
+<circle cx="367.5" cy="690.3" r="5.5" fill="#4f86f7"/>
+<circle cx="280.2" cy="585.9" r="5.5" fill="#4f86f7"/>
+<circle cx="278.0" cy="799.1" r="5.5" fill="#4f86f7"/>
+<circle cx="284.2" cy="647.0" r="5.5" fill="#4f86f7"/>
+<circle cx="225.5" cy="714.2" r="5.5" fill="#4f86f7"/>
+<circle cx="218.8" cy="662.8" r="5.5" fill="#4f86f7"/>
+<circle cx="219.1" cy="687.9" r="5.5" fill="#4f86f7"/>
+<circle cx="166.9" cy="664.3" r="5.5" fill="#4f86f7"/>
+<circle cx="153.7" cy="581.8" r="5.5" fill="#4f86f7"/>
+<circle cx="143.3" cy="786.4" r="5.5" fill="#4f86f7"/>
+<circle cx="101.8" cy="696.2" r="5.5" fill="#4f86f7"/>
+</g>
+<text x="35.8" y="873.4" class="cap"><tspan class="seedno">Seed 120</tspan>  <tspan fill="#f5c542">with the scan: passes to H9</tspan><tspan fill="#a9a79f"> · </tspan><tspan fill="#ff7a93">without: passes to H1</tspan></text>
+</g>
+<g class="seed" data-seed="125" data-factual="pass:H9" data-counterfactual="carry">
+<clipPath id="clip125"><rect x="426.9" y="519.2" width="355.2" height="333.2" rx="10"/></clipPath>
+<g clip-path="url(#clip125)">
+<rect x="426.9" y="519.2" width="355.2" height="333.2" fill="#12301f"/>
+<line x1="524.9" y1="519.2" x2="524.9" y2="852.4" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<circle cx="524.9" cy="685.8" r="44.8" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="701.2" y="587.0" width="80.9" height="197.6" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="778.1" y="667.9" width="4" height="35.9" fill="#efede5" opacity="0.8"/>
+<polygon points="533.3,731.9 678.5,754.6 680.0,741.3 680.2,728.0 679.3,714.7 677.1,701.5 673.8,688.6 669.3,676.0 663.6,663.9 656.9,652.4 649.2,641.5 640.6,631.4 631.0,622.0 620.7,613.6 609.6,606.2 597.9,599.8 585.6,594.5 573.0,590.3 560.0,587.3 546.7,585.5 533.4,584.9 520.1,585.4 506.9,587.2 493.9,590.2 481.2,594.4" fill="#f5c542" fill-opacity="0.14" stroke="#f5c542" stroke-opacity="0.45" stroke-width="1"/>
+<circle cx="533.3" cy="731.9" r="13" fill="none" stroke="#ff7a93" stroke-width="2.5" stroke-dasharray="5 4"/>
+<line x1="531.8" y1="731.9" x2="713.6" y2="748.3" stroke="#f5c542" stroke-width="3" stroke-linecap="round" marker-end="url(#head-with)"/>
+<circle cx="333.9" cy="697.8" r="5.5" fill="#f08a4b"/>
+<circle cx="513.9" cy="818.2" r="5.5" fill="#f08a4b"/>
+<circle cx="525.1" cy="553.1" r="5.5" fill="#f08a4b"/>
+<circle cx="436.3" cy="731.8" r="5.5" fill="#f08a4b"/>
+<circle cx="441.6" cy="640.4" r="5.5" fill="#f08a4b"/>
+<circle cx="498.4" cy="678.8" r="5.5" fill="#f08a4b"/>
+<circle cx="533.3" cy="731.9" r="5.5" fill="#f08a4b" stroke="#efede5" stroke-width="2.5"/>
+<text x="541.3" y="724.9" class="tag">H8</text>
+<circle cx="574.5" cy="609.9" r="5.5" fill="#f08a4b"/>
+<circle cx="618.7" cy="826.9" r="5.5" fill="#f08a4b"/>
+<circle cx="629.9" cy="561.9" r="5.5" fill="#f08a4b"/>
+<circle cx="666.3" cy="723.6" r="5.5" fill="#f5c542"/>
+<text x="674.3" y="716.6" class="tag">H9</text>
+<circle cx="758.6" cy="690.3" r="5.5" fill="#4f86f7"/>
+<circle cx="671.5" cy="589.9" r="5.5" fill="#4f86f7"/>
+<circle cx="669.3" cy="795.2" r="5.5" fill="#4f86f7"/>
+<circle cx="673.3" cy="650.5" r="5.5" fill="#4f86f7"/>
+<circle cx="607.2" cy="713.9" r="5.5" fill="#4f86f7"/>
+<circle cx="607.3" cy="661.6" r="5.5" fill="#4f86f7"/>
+<circle cx="612.0" cy="690.3" r="5.5" fill="#4f86f7"/>
+<circle cx="553.2" cy="662.0" r="5.5" fill="#4f86f7"/>
+<circle cx="548.2" cy="580.5" r="5.5" fill="#4f86f7"/>
+<circle cx="530.7" cy="793.9" r="5.5" fill="#4f86f7"/>
+<circle cx="499.9" cy="697.7" r="5.5" fill="#4f86f7"/>
+</g>
+<text x="426.9" y="873.4" class="cap"><tspan class="seedno">Seed 125</tspan>  <tspan fill="#f5c542">with the scan: passes to H9</tspan><tspan fill="#a9a79f"> · </tspan><tspan fill="#ff7a93">without: keeps the ball</tspan></text>
+</g>
+<g class="seed" data-seed="130" data-factual="pass:H9" data-counterfactual="pass:H4">
+<clipPath id="clip130"><rect x="817.9" y="519.2" width="355.2" height="333.2" rx="10"/></clipPath>
+<g clip-path="url(#clip130)">
+<rect x="817.9" y="519.2" width="355.2" height="333.2" fill="#12301f"/>
+<line x1="915.9" y1="519.2" x2="915.9" y2="852.4" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<circle cx="915.9" cy="685.8" r="44.8" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="1092.3" y="587.0" width="80.9" height="197.6" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="1169.2" y="667.9" width="4" height="35.9" fill="#efede5" opacity="0.8"/>
+<polygon points="920.8,737.8 1066.3,758.5 1067.6,745.2 1067.6,731.9 1066.5,718.6 1064.2,705.5 1060.6,692.6 1056.0,680.1 1050.2,668.1 1043.3,656.6 1035.5,645.8 1026.7,635.8 1017.0,626.6 1006.5,618.4 995.3,611.1 983.5,604.8 971.2,599.7 958.5,595.7 945.5,592.9 932.2,591.2 918.9,590.8 905.6,591.6 892.4,593.5 879.4,596.7 866.8,601.0" fill="#f5c542" fill-opacity="0.14" stroke="#f5c542" stroke-opacity="0.45" stroke-width="1"/>
+<line x1="919.3" y1="737.7" x2="825.0" y2="731.8" stroke="#ff7a93" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 6" marker-end="url(#head-without)"/>
+<line x1="919.3" y1="737.7" x2="1115.9" y2="752.5" stroke="#f5c542" stroke-width="3" stroke-linecap="round" marker-end="url(#head-with)"/>
+<circle cx="723.2" cy="699.0" r="5.5" fill="#f08a4b"/>
+<circle cx="902.1" cy="817.9" r="5.5" fill="#f08a4b"/>
+<circle cx="911.7" cy="562.3" r="5.5" fill="#f08a4b"/>
+<circle cx="825.0" cy="731.8" r="5.5" fill="#f08a4b"/>
+<circle cx="838.0" cy="646.1" r="5.5" fill="#f08a4b"/>
+<circle cx="888.9" cy="689.0" r="5.5" fill="#f08a4b"/>
+<circle cx="920.8" cy="737.8" r="5.5" fill="#f08a4b" stroke="#efede5" stroke-width="2.5"/>
+<text x="928.8" y="730.8" class="tag">H8</text>
+<circle cx="974.3" cy="622.9" r="5.5" fill="#f08a4b"/>
+<circle cx="1009.9" cy="831.5" r="5.5" fill="#f08a4b"/>
+<circle cx="1014.7" cy="561.7" r="5.5" fill="#f08a4b"/>
+<circle cx="1068.3" cy="727.4" r="5.5" fill="#f5c542"/>
+<text x="1076.3" y="720.4" class="tag">H9</text>
+<circle cx="1149.6" cy="690.8" r="5.5" fill="#4f86f7"/>
+<circle cx="1068.6" cy="593.0" r="5.5" fill="#4f86f7"/>
+<circle cx="1055.6" cy="799.4" r="5.5" fill="#4f86f7"/>
+<circle cx="1075.7" cy="653.0" r="5.5" fill="#4f86f7"/>
+<circle cx="1019.5" cy="706.3" r="5.5" fill="#4f86f7"/>
+<circle cx="1006.7" cy="666.8" r="5.5" fill="#4f86f7"/>
+<circle cx="979.4" cy="711.8" r="5.5" fill="#4f86f7"/>
+<circle cx="945.5" cy="665.7" r="5.5" fill="#4f86f7"/>
+<circle cx="935.5" cy="589.5" r="5.5" fill="#4f86f7"/>
+<circle cx="923.1" cy="792.1" r="5.5" fill="#4f86f7"/>
+<circle cx="886.1" cy="690.9" r="5.5" fill="#4f86f7"/>
+</g>
+<text x="817.9" y="873.4" class="cap"><tspan class="seedno">Seed 130</tspan>  <tspan fill="#f5c542">with the scan: passes to H9</tspan><tspan fill="#a9a79f"> · </tspan><tspan fill="#ff7a93">without: passes to H4</tspan></text>
+</g>
+<g class="seed" data-seed="135" data-factual="pass:H9" data-counterfactual="carry">
+<clipPath id="clip135"><rect x="1209.0" y="519.2" width="355.2" height="333.2" rx="10"/></clipPath>
+<g clip-path="url(#clip135)">
+<rect x="1209.0" y="519.2" width="355.2" height="333.2" fill="#12301f"/>
+<line x1="1307.0" y1="519.2" x2="1307.0" y2="852.4" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<circle cx="1307.0" cy="685.8" r="44.8" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="1483.4" y="587.0" width="80.9" height="197.6" fill="none" stroke="rgba(239,237,229,0.32)" stroke-width="1.5"/>
+<rect x="1560.2" y="667.9" width="4" height="35.9" fill="#efede5" opacity="0.8"/>
+<polygon points="1313.2,734.0 1459.2,750.9 1460.2,737.6 1459.9,724.3 1458.4,711.0 1455.7,697.9 1451.8,685.2 1446.8,672.8 1440.7,660.9 1433.6,649.7 1425.4,639.1 1416.4,629.3 1406.4,620.4 1395.8,612.4 1384.4,605.4 1372.4,599.5 1360.0,594.7 1347.2,591.0 1334.1,588.5 1320.8,587.2 1307.4,587.1 1294.2,588.3 1281.0,590.6 1268.1,594.1 1255.6,598.8" fill="#f5c542" fill-opacity="0.14" stroke="#f5c542" stroke-opacity="0.45" stroke-width="1"/>
+<circle cx="1313.2" cy="734.0" r="13" fill="none" stroke="#ff7a93" stroke-width="2.5" stroke-dasharray="5 4"/>
+<line x1="1311.7" y1="733.9" x2="1489.6" y2="737.0" stroke="#f5c542" stroke-width="3" stroke-linecap="round" marker-end="url(#head-with)"/>
+<circle cx="1121.3" cy="699.2" r="5.5" fill="#f08a4b"/>
+<circle cx="1295.2" cy="820.1" r="5.5" fill="#f08a4b"/>
+<circle cx="1296.4" cy="555.0" r="5.5" fill="#f08a4b"/>
+<circle cx="1223.9" cy="728.2" r="5.5" fill="#f08a4b"/>
+<circle cx="1223.0" cy="641.8" r="5.5" fill="#f08a4b"/>
+<circle cx="1278.2" cy="681.2" r="5.5" fill="#f08a4b"/>
+<circle cx="1313.2" cy="734.0" r="5.5" fill="#f08a4b" stroke="#efede5" stroke-width="2.5"/>
+<text x="1321.2" y="727.0" class="tag">H8</text>
+<circle cx="1361.8" cy="625.5" r="5.5" fill="#f08a4b"/>
+<circle cx="1392.7" cy="831.5" r="5.5" fill="#f08a4b"/>
+<circle cx="1407.4" cy="555.6" r="5.5" fill="#f08a4b"/>
+<circle cx="1448.6" cy="717.2" r="5.5" fill="#f5c542"/>
+<text x="1456.6" y="710.2" class="tag">H9</text>
+<circle cx="1540.7" cy="690.5" r="5.5" fill="#4f86f7"/>
+<circle cx="1454.9" cy="595.1" r="5.5" fill="#4f86f7"/>
+<circle cx="1455.3" cy="793.8" r="5.5" fill="#4f86f7"/>
+<circle cx="1456.1" cy="653.2" r="5.5" fill="#4f86f7"/>
+<circle cx="1411.6" cy="706.6" r="5.5" fill="#4f86f7"/>
+<circle cx="1389.7" cy="661.3" r="5.5" fill="#4f86f7"/>
+<circle cx="1366.8" cy="709.5" r="5.5" fill="#4f86f7"/>
+<circle cx="1331.7" cy="666.3" r="5.5" fill="#4f86f7"/>
+<circle cx="1323.2" cy="594.8" r="5.5" fill="#4f86f7"/>
+<circle cx="1312.0" cy="797.9" r="5.5" fill="#4f86f7"/>
+<circle cx="1278.9" cy="694.2" r="5.5" fill="#4f86f7"/>
+</g>
+<text x="1209.0" y="873.4" class="cap"><tspan class="seedno">Seed 135</tspan>  <tspan fill="#f5c542">with the scan: passes to H9</tspan><tspan fill="#a9a79f"> · </tspan><tspan fill="#ff7a93">without: keeps the ball</tspan></text>
+</g>
+</svg>
