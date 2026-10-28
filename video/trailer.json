@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "about": "The v16 < 2:00 trailer: the approved opening and every Blender final, the live scan story and coach drill, then the three doors, studios A–D, Value and verified evidence.",
+  "about": "The v18 < 2:00 trailer, after the team's story-first proposal: a mistake frozen in silence, the coach's questions in the replay room, then the same match moment twice (without the scan, rewound, with it), the coach drill, Your turn, studios, Value and verified evidence, and the kid's goal.",
   "output": {
     "fps": 30,
     "width": 1920,
@@ -30,7 +30,7 @@
       "asset": "music-score-hybrid",
       "at": 0,
       "from": 0,
-      "until": 87.066,
+      "until": 90.499,
       "gain_db": 4,
       "fade_in": 0,
       "fade_out": 0,
@@ -1060,7 +1060,7 @@
     },
     "crew": {
       "template": "lineup",
-      "dur": 1.4,
+      "dur": 3.8,
       "alpha": false,
       "params": {
         "header": "THE CREW",
@@ -1120,7 +1120,7 @@
     },
     "spec": {
       "template": "spec",
-      "dur": 2.5,
+      "dur": 2.6,
       "alpha": true,
       "params": {
         "header": "UNDER THE HOOD",
@@ -1168,7 +1168,7 @@
     },
     "end": {
       "template": "end",
-      "dur": 4.5,
+      "dur": 5.2,
       "alpha": false,
       "params": {
         "name": "THROUGH THEIR EYES",
@@ -1319,9 +1319,9 @@
       "dur": 0.9,
       "alpha": true,
       "params": {
-        "name": "YOU ARE No. 14.",
+        "name": "THAT'S YOU.",
         "role": "",
-        "sub": "YOU NEVER CHECK YOUR SHOULDER.",
+        "sub": "EYES ON THE BALL.",
         "spot": {
           "x": 960,
           "y": 600,
@@ -1521,16 +1521,20 @@
     },
     "card-vision": {
       "template": "card",
-      "dur": 1.1,
+      "dur": 1.8,
       "alpha": false,
       "params": {
-        "kicker": "GET YOUR VISION",
+        "kicker": "SEE WHAT HE SAW",
         "lines": [
+          {
+            "text": "THROUGH THEIR EYES."
+          },
           {
             "text": "GET YOUR VISION.",
             "color": "gold"
           }
-        ]
+        ],
+        "stagger": 0.5
       }
     },
     "card-scan": {
@@ -1831,12 +1835,12 @@
       "dur": 2.3,
       "alpha": true,
       "params": {
-        "kicker": "GET YOUR VISION",
+        "kicker": "HIS EYES",
         "lines": [
           {
             "text": "SCAN · NEW INFORMATION · NEW OPTIONS",
             "color": "gold",
-            "size": 76
+            "size": 60
           }
         ],
         "align": "lower-left",
@@ -1848,12 +1852,12 @@
       "dur": 1.7,
       "alpha": true,
       "params": {
-        "kicker": "GET YOUR VISION",
+        "kicker": "ACT II · WITH THE SCAN",
         "lines": [
           {
-            "text": "DECISION · EXECUTE · SIDE-ON",
+            "text": "HE PLAYS VARNHALL IN.",
             "color": "gold",
-            "size": 82
+            "size": 96
           }
         ],
         "align": "lower-left",
@@ -1865,7 +1869,7 @@
       "dur": 2,
       "alpha": true,
       "params": {
-        "kicker": "GET YOUR VISION",
+        "kicker": "RE-RUN",
         "lines": [
           {
             "text": "WITHOUT THAT SCAN…",
@@ -1921,14 +1925,14 @@
       "dur": 2.5,
       "alpha": true,
       "params": {
-        "kicker": "GET YOUR VISION",
+        "kicker": "COACH DRILL",
         "lines": [
           {
-            "text": "LEFT LOOK → DROP BACK",
+            "text": "SCAN LEFT → DROP BACK",
             "size": 78
           },
           {
-            "text": "RIGHT LOOK → SIDE-ON",
+            "text": "SCAN RIGHT → SIDE-ON",
             "color": "gold",
             "size": 78
           }
@@ -2015,7 +2019,7 @@
       "dur": 2.3,
       "alpha": true,
       "params": {
-        "kicker": "GET YOUR VISION",
+        "kicker": "FOR FANS",
         "lines": [
           {
             "text": "YOUR TURN",
@@ -2032,7 +2036,7 @@
       "dur": 1.9,
       "alpha": true,
       "params": {
-        "kicker": "GET YOUR VISION",
+        "kicker": "FOR FANS",
         "lines": [
           {
             "text": "HE SAW THE RUN. WOULD YOU?",
@@ -2049,10 +2053,10 @@
       "dur": 1.3,
       "alpha": true,
       "params": {
-        "kicker": "GET YOUR VISION",
+        "kicker": "FOR THE LEAGUE",
         "lines": [
           {
-            "text": "A · AI TACTICAL BROADCAST",
+            "text": "AI TACTICAL BROADCAST",
             "color": "gold",
             "size": 82
           }
@@ -2066,16 +2070,12 @@
       "dur": 1.7,
       "alpha": true,
       "params": {
-        "kicker": "GET YOUR VISION",
+        "kicker": "FOR EVERY FAN",
         "lines": [
           {
-            "text": "B · PERSONALISED COMMENTARY · 中文",
-            "size": 68
-          },
-          {
-            "text": "xT / 预期威胁",
+            "text": "PERSONALISED COMMENTARY · 中文",
             "color": "gold",
-            "size": 68
+            "size": 72
           }
         ],
         "align": "lower-left",
@@ -2127,7 +2127,7 @@
       "dur": 2.5,
       "alpha": true,
       "params": {
-        "kicker": "GET YOUR VISION",
+        "kicker": "FOR THE LEAGUE",
         "lines": [
           {
             "text": "VALUE · LEAGUE REVENUE LEVERS",
@@ -2149,7 +2149,7 @@
       "dur": 2.3,
       "alpha": true,
       "params": {
-        "kicker": "GET YOUR VISION",
+        "kicker": "VERIFIER",
         "lines": [
           {
             "text": "EVERY LINE CHECKED BEFORE IT AIRS",
@@ -2181,11 +2181,15 @@
     },
     "case-chance": {
       "template": "slam",
-      "dur": 2.8,
+      "dur": 3.4,
       "alpha": true,
       "params": {
-        "kicker": "WITHOUT THE SCAN",
+        "kicker": "ACT I · WITHOUT THE SCAN",
         "lines": [
+          {
+            "text": "HE PLAYS IT SAFE.",
+            "size": 92
+          },
           {
             "text": "THE CHANCE IS GONE",
             "color": "gold",
@@ -2193,7 +2197,8 @@
           }
         ],
         "align": "lower-left",
-        "backdrop": true
+        "backdrop": true,
+        "stagger": 1.9
       }
     },
     "pain-replay": {
@@ -2253,6 +2258,130 @@
         ],
         "stagger": 2.4
       }
+    },
+    "mistake": {
+      "template": "slam",
+      "dur": 2.5,
+      "alpha": true,
+      "params": {
+        "lines": [
+          {
+            "text": "THE MISTAKE HAPPENED",
+            "size": 86
+          },
+          {
+            "text": "BEFORE THE TOUCH.",
+            "color": "gold",
+            "size": 86
+          }
+        ],
+        "align": "left",
+        "stagger": 0.45,
+        "backdrop": true
+      }
+    },
+    "act2": {
+      "template": "slam",
+      "dur": 2.3,
+      "alpha": true,
+      "params": {
+        "kicker": "ACT II · WITH THE SCAN",
+        "lines": [
+          {
+            "text": "THE SAME MOMENT,",
+            "size": 110
+          },
+          {
+            "text": "REWOUND.",
+            "color": "gold",
+            "size": 110
+          }
+        ],
+        "align": "center",
+        "stagger": 0.35,
+        "backdrop": true
+      }
+    },
+    "label-dr-2p5": {
+      "template": "label",
+      "dur": 2.5,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-2p6": {
+      "template": "label",
+      "dur": 2.6,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-dr-2p3": {
+      "template": "label",
+      "dur": 2.3,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-bl-2p0": {
+      "template": "label",
+      "dur": 2.0,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-ie-2p0": {
+      "template": "label",
+      "dur": 2.0,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
+    },
+    "label-dr-3p35": {
+      "template": "label",
+      "dur": 3.35,
+      "alpha": true,
+      "params": {
+        "text": "DRAMATISATION · RENDERED IN BLENDER"
+      }
+    },
+    "label-bl-2p3": {
+      "template": "label",
+      "dur": 2.3,
+      "alpha": true,
+      "params": {
+        "text": "RENDERED IN BLENDER FROM OUR SIMULATION DATA"
+      }
+    },
+    "tag-sim": {
+      "template": "tag",
+      "dur": 1.9,
+      "alpha": true,
+      "params": {
+        "text": "A SIMULATED MATCH",
+        "sub": "EVERY PLAYER FICTIONAL"
+      }
+    },
+    "label-cf-3p5": {
+      "template": "label",
+      "dur": 3.5,
+      "alpha": true,
+      "params": {
+        "text": "RE-SIMULATED WITHOUT THE SCAN · RENDERED IN BLENDER"
+      }
+    },
+    "label-ie-3p9": {
+      "template": "label",
+      "dur": 3.9,
+      "alpha": true,
+      "params": {
+        "text": "IN-ENGINE · RENDERED FROM OUR SIMULATION DATA"
+      }
     }
   },
   "beats": [
@@ -2282,10 +2411,6 @@
         "glue"
       ],
       "overlays": [
-        {
-          "title": "tag-his-eyes",
-          "at": 0.05
-        },
         {
           "title": "label-dr-1p633",
           "at": 0
@@ -2372,14 +2497,6 @@
           "at": 0
         }
       ],
-      "vo": [
-        {
-          "id": "vc1",
-          "at": 0.15,
-          "speaker": "coach",
-          "text": "You watched the ball. You missed the game."
-        }
-      ],
       "letterbox": 2.39,
       "fx": [
         "glue"
@@ -2387,21 +2504,52 @@
       "sfx": []
     },
     {
-      "id": "b03m-card-watched",
+      "id": "b03m-freeze",
       "story": "blender",
       "section": "open",
       "dur": 2.5,
       "picture": {
-        "src": "title",
-        "id": "card-watched"
+        "src": "clip",
+        "path": "out/video/blender/bs1_steal.mp4",
+        "in": 0.0,
+        "fit": "pad"
       },
-      "sfx": []
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "freeze": {
+        "at": 0.05
+      },
+      "overlays": [
+        {
+          "title": "label-dr-2p5",
+          "at": 0
+        },
+        {
+          "title": "mistake",
+          "at": 0.5
+        }
+      ],
+      "sfx": [
+        {
+          "name": "heartbeat",
+          "at": 0.2,
+          "dur": 2.2,
+          "gain_db": -16
+        },
+        {
+          "name": "stamp",
+          "at": 0.5,
+          "gain_db": -6
+        }
+      ]
     },
     {
       "id": "b05a-s2-ots",
       "story": "blender",
       "section": "open",
-      "dur": 1.2,
+      "dur": 3.35,
       "picture": {
         "src": "clip",
         "path": "out/video/trailer/pins/bs2_ots.mp4",
@@ -2410,28 +2558,44 @@
       },
       "overlays": [
         {
-          "title": "label-dr-1p2",
+          "title": "label-dr-3p35",
           "at": 0
         }
       ],
       "vo": [
         {
-          "id": "vc2",
-          "at": 0.4,
+          "id": "vc18a",
+          "at": 0.25,
           "speaker": "coach",
-          "text": "Before the ball arrives, know what's around you."
+          "text": "You watched the ball. Who did you miss?"
         }
       ],
       "letterbox": 2.39,
       "fx": [
         "glue"
+      ],
+      "freeze": {
+        "at": 1.15
+      },
+      "sfx": [
+        {
+          "name": "shutter",
+          "at": 0.0,
+          "gain_db": -5
+        },
+        {
+          "name": "hum",
+          "at": 0.0,
+          "dur": 8.9,
+          "gain_db": -20
+        }
       ]
     },
     {
       "id": "b05b-s2-push",
       "story": "blender",
       "section": "open",
-      "dur": 1.6,
+      "dur": 2.3,
       "picture": {
         "src": "clip",
         "path": "out/video/trailer/pins/bs2c.mp4",
@@ -2440,17 +2604,24 @@
       },
       "overlays": [
         {
-          "title": "saw-believed",
-          "at": 0.2
-        },
-        {
-          "title": "label-dr-1p6",
+          "title": "label-dr-2p3",
           "at": 0
         }
       ],
       "letterbox": 2.39,
       "fx": [
         "glue"
+      ],
+      "freeze": {
+        "at": 1.55
+      },
+      "vo": [
+        {
+          "id": "vc18b",
+          "at": 0.15,
+          "speaker": "coach",
+          "text": "You can't change what you don't see."
+        }
       ]
     },
     {
@@ -2538,7 +2709,7 @@
       "id": "b04-app-board",
       "story": "app",
       "section": "open",
-      "dur": 2.8,
+      "dur": 5.65,
       "picture": {
         "src": "capture",
         "shot": "22-board-blind",
@@ -2561,16 +2732,77 @@
       ]
     },
     {
-      "id": "b05ba-card-costs",
-      "dur": 1.4,
+      "id": "b05c-board",
+      "dur": 3.3,
+      "picture": {
+        "src": "capture",
+        "shot": "22-board-blind",
+        "in": 2.8,
+        "push": [
+          1,
+          1.1
+        ]
+      },
+      "sfx": [],
+      "vo": [
+        {
+          "id": "vc18c",
+          "at": 0.15,
+          "speaker": "coach",
+          "text": "Then let's look again. Through Their Eyes."
+        }
+      ]
+    },
+    {
+      "id": "b05d-card-vision",
+      "dur": 1.8,
       "picture": {
         "src": "title",
-        "id": "card-costs"
+        "id": "card-vision"
       },
+      "vo": [
+        {
+          "id": "vc3",
+          "at": 0.6,
+          "speaker": "coach",
+          "text": "Get your vision."
+        }
+      ],
       "sfx": []
     },
     {
-      "id": "b05bb-case-without",
+      "id": "b05e-enter-pov",
+      "dur": 2.0,
+      "picture": {
+        "src": "cine",
+        "id": "pov-match",
+        "in": 0
+      },
+      "overlays": [
+        {
+          "title": "label-ie-2p0",
+          "at": 0
+        },
+        {
+          "title": "tag-sim",
+          "at": 0.1
+        }
+      ],
+      "sfx": [],
+      "letterbox": 2.39,
+      "fx": [
+        "glue"
+      ],
+      "vo": [
+        {
+          "id": "vo30",
+          "at": 0.3,
+          "text": "Meet H8."
+        }
+      ]
+    },
+    {
+      "id": "b05f-act1-without",
       "dur": 3.5,
       "picture": {
         "src": "clip",
@@ -2583,6 +2815,10 @@
         "glue"
       ],
       "overlays": [
+        {
+          "title": "label-cf-3p5",
+          "at": 0
+        },
         {
           "title": "case-chance",
           "at": 0.1
@@ -2601,111 +2837,36 @@
       }
     },
     {
-      "id": "b05bc-a1-pov",
-      "dur": 3,
+      "id": "b05g-rewind",
+      "dur": 2.3,
       "picture": {
-        "src": "cine",
-        "id": "pov-match",
-        "in": 2
+        "src": "clip",
+        "path": "out/video/blender/bl03_without.mp4",
+        "in": 0,
+        "speed": 1.13,
+        "reverse": true,
+        "fit": "pad"
       },
-      "vo": [
-        {
-          "id": "vo01",
-          "at": 0.15,
-          "text": "Replays show where the ball went…",
-          "style": "whispering",
-          "degree": 1
-        },
-        {
-          "id": "vo02",
-          "at": 1.75,
-          "text": "never what the player saw.",
-          "style": "whispering",
-          "degree": 1
-        }
+      "letterbox": 2.39,
+      "fx": [
+        "rewind",
+        "glue"
       ],
       "overlays": [
         {
-          "title": "label-ie-3p0",
+          "title": "label-bl-2p3",
           "at": 0
         },
         {
-          "title": "pain-replay",
-          "at": 1.6
+          "title": "act2",
+          "at": 0.1
         }
       ],
-      "sfx": [],
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ]
-    },
-    {
-      "id": "b05bd-card-pain",
-      "dur": 6.4,
-      "picture": {
-        "src": "title",
-        "id": "card-pain"
-      },
       "vo": [
         {
-          "id": "vo41",
+          "id": "vo18r",
           "at": 0.2,
-          "text": "No tool can re-run a moment that already happened, so a player never gets exact feedback on the decision he made."
-        }
-      ],
-      "sfx": []
-    },
-    {
-      "id": "b05be-card-product",
-      "dur": 8.8,
-      "picture": {
-        "src": "title",
-        "id": "card-product"
-      },
-      "vo": [
-        {
-          "id": "vo42",
-          "at": 0.3,
-          "text": "Through Their Eyes shows what the player saw and what he believed. Remove a scan, and it re-runs the moment, so every decision gets real feedback."
-        }
-      ],
-      "sfx": []
-    },
-    {
-      "id": "b05c-board",
-      "dur": 1.7,
-      "picture": {
-        "src": "capture",
-        "shot": "22-board-blind",
-        "in": 2.8,
-        "push": [
-          1,
-          1.1
-        ]
-      },
-      "sfx": [],
-      "vo": [
-        {
-          "id": "vo43",
-          "at": 0.1,
-          "text": "Let's replay that moment."
-        }
-      ]
-    },
-    {
-      "id": "b05d-card-vision",
-      "dur": 1.1,
-      "picture": {
-        "src": "title",
-        "id": "card-vision"
-      },
-      "vo": [
-        {
-          "id": "vc3",
-          "at": 0.05,
-          "speaker": "coach",
-          "text": "Get your vision."
+          "text": "This time, he takes the scan."
         }
       ],
       "sfx": []
@@ -2736,13 +2897,7 @@
           "at": 0
         }
       ],
-      "vo": [
-        {
-          "id": "vo30",
-          "at": 0.3,
-          "text": "Meet H8."
-        }
-      ],
+      "vo": [],
       "sfx": []
     },
     {
@@ -2807,41 +2962,39 @@
       "sfx": []
     },
     {
-      "id": "b11-rw1",
-      "dur": 0.45,
+      "id": "b11a-pov-look",
+      "dur": 3.9,
       "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl01_look.mp4",
-        "in": 0,
-        "fit": "pad",
-        "speed": 8.8,
-        "reverse": true
+        "src": "cine",
+        "id": "pov-look",
+        "in": 0
       },
       "letterbox": 2.39,
       "fx": [
-        "rewind",
         "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-bl-0p45",
-          "at": 0
-        }
       ],
       "vo": [
         {
           "id": "vo33",
-          "at": 0,
+          "at": 0.05,
           "text": "Here's what he saw."
+        },
+        {
+          "id": "vo03",
+          "at": 1.25,
+          "text": "A scan over his shoulder, and he finds the runner."
         }
       ],
-      "sfx": [
+      "sfx": [],
+      "overlays": [
         {
-          "name": "touch",
-          "at": 0,
-          "gain_db": -3
+          "title": "label-ie-3p9",
+          "at": 0
         }
-      ]
+      ],
+      "freeze": {
+        "at": 2.9
+      }
     },
     {
       "id": "b12-bl02a",
@@ -2890,32 +3043,12 @@
           "at": 2.32,
           "gain_db": -4
         }
-      ]
-    },
-    {
-      "id": "b14-pov-look",
-      "dur": 2.8,
-      "picture": {
-        "src": "cine",
-        "id": "pov-look",
-        "in": 0
-      },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
       ],
       "vo": [
         {
-          "id": "vo03",
-          "at": 0.1,
-          "text": "A look over his shoulder, and he finds the runner."
-        }
-      ],
-      "sfx": [],
-      "overlays": [
-        {
-          "title": "label-ie-2p6",
-          "at": 0
+          "id": "vo48",
+          "at": 0.5,
+          "text": "So he plays it forward, into the run."
         }
       ]
     },
@@ -2941,7 +3074,8 @@
         {
           "id": "vo03b",
           "at": 0.15,
-          "text": "Every scan shows him something new — and new options."
+          "text": "Every scan shows him something new — and new options.",
+          "caption": "top"
         }
       ],
       "sfx": [
@@ -3021,7 +3155,8 @@
         {
           "id": "vo05",
           "at": 0.3,
-          "text": "Take that scan away, and re-run the match."
+          "text": "Take that scan away, and re-run the match.",
+          "caption": "top"
         }
       ],
       "sfx": [],
@@ -3052,74 +3187,6 @@
       "sfx": []
     },
     {
-      "id": "b18-rw2",
-      "dur": 1.15,
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl01_look.mp4",
-        "in": 0,
-        "speed": 3.44,
-        "reverse": true,
-        "fit": "pad"
-      },
-      "letterbox": 2.39,
-      "fx": [
-        "rewind",
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "label-bl-1p15",
-          "at": 0
-        }
-      ],
-      "sfx": [],
-      "out": {
-        "type": "fade",
-        "dur": 0.3
-      }
-    },
-    {
-      "id": "b19-bl03",
-      "dur": 2.6,
-      "picture": {
-        "src": "clip",
-        "path": "out/video/blender/bl03_without.mp4",
-        "in": 0,
-        "fit": "pad"
-      },
-      "letterbox": 2.39,
-      "fx": [
-        "glue"
-      ],
-      "overlays": [
-        {
-          "title": "back-to-h4",
-          "at": 1.2
-        },
-        {
-          "title": "label-bl-2p6",
-          "at": 0
-        }
-      ],
-      "vo": [],
-      "sfx": [
-        {
-          "name": "shutter",
-          "at": 1.2,
-          "gain_db": -5
-        },
-        {
-          "name": "touch",
-          "at": 2,
-          "gain_db": -4
-        }
-      ],
-      "out": {
-        "type": "cut"
-      }
-    },
-    {
       "id": "b21-drill-coach",
       "dur": 5.0,
       "picture": {
@@ -3142,7 +3209,7 @@
           "id": "vc4",
           "at": 0.1,
           "speaker": "coach",
-          "text": "Look left, he drops it back. Look right, he receives side-on."
+          "text": "Scan left, he drops it back. Scan right, he receives side-on."
         }
       ],
       "sfx": [],
@@ -3255,7 +3322,8 @@
         {
           "id": "vo37",
           "at": 0.05,
-          "text": "For the league: a tactical broadcast, every line checked."
+          "text": "For the league: a tactical broadcast, every line checked.",
+          "caption": "top"
         }
       ],
       "sfx": [],
@@ -3317,7 +3385,7 @@
     },
     {
       "id": "b37-value",
-      "dur": 3.8,
+      "dur": 2.8,
       "picture": {
         "src": "capture",
         "shot": "30-value",
@@ -3337,7 +3405,7 @@
         {
           "id": "vo40",
           "at": 0.05,
-          "text": "Value on the league's own levers, with demo figures labelled."
+          "text": "Value for the league, with demo figures labelled."
         }
       ],
       "sfx": [],
@@ -3349,34 +3417,46 @@
       }
     },
     {
+      "id": "b37b-crew",
+      "dur": 3.8,
+      "picture": {
+        "src": "title",
+        "id": "crew"
+      },
+      "vo": [
+        {
+          "id": "vo47",
+          "at": 0.15,
+          "text": "A crew of AI agents picks the moment and writes every line."
+        }
+      ],
+      "sfx": []
+    },
+    {
       "id": "b38-evidence",
       "dur": 2.4,
       "picture": {
         "src": "capture",
         "shot": "07-evidence",
-        "in": 1.6,
+        "in": 3.4,
         "crop": [
-          0,
-          0,
+          338,
+          380,
           1244,
           700
         ],
         "push": [
           1,
           1.06
-        ]
+        ],
+        "speed": 0.58
       },
-      "overlays": [
-        {
-          "title": "v16-evidence",
-          "at": 0.05
-        }
-      ],
+      "overlays": [],
       "vo": [
         {
           "id": "vo09",
           "at": 0.1,
-          "text": "Every line is checked against the simulation before it airs."
+          "text": "Every line is checked before it airs."
         }
       ],
       "sfx": [
@@ -3393,6 +3473,20 @@
       "out": {
         "type": "cut"
       }
+    },
+    {
+      "id": "b38c-stack",
+      "dur": 2.6,
+      "picture": {
+        "src": "black"
+      },
+      "overlays": [
+        {
+          "title": "spec",
+          "at": 0
+        }
+      ],
+      "sfx": []
     },
     {
       "id": "b42-s4a-pov",
@@ -3436,6 +3530,14 @@
       "letterbox": 2.39,
       "fx": [
         "glue"
+      ],
+      "vo": [
+        {
+          "id": "vc18d",
+          "at": 0.8,
+          "speaker": "coach",
+          "text": "Now you see him."
+        }
       ]
     },
     {
@@ -3514,7 +3616,7 @@
     {
       "id": "b45b-s4f-celebrate",
       "story": "blender",
-      "dur": 1,
+      "dur": 1.6,
       "picture": {
         "src": "clip",
         "path": "out/video/blender/bs4_celebrate.mp4",
@@ -3602,7 +3704,7 @@
     {
       "id": "b45-app-s4-fp-goal",
       "story": "app",
-      "dur": 1.8,
+      "dur": 2.4,
       "picture": {
         "src": "cine",
         "id": "fp-finish",
@@ -3662,7 +3764,7 @@
     },
     {
       "id": "b47-end",
-      "dur": 4.5,
+      "dur": 5.2,
       "picture": {
         "src": "title",
         "id": "end"

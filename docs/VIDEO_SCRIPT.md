@@ -214,7 +214,7 @@ The CC0 candidates remain listed in `video/assets.json` and `video/CREDITS.md`.
 
 ## Open
 
-- Published: the v17 cut, https://youtu.be/q2_qIRchqYs (1:37), which replaced the v16 cut (https://youtu.be/1Z14E_X2JXA, 1:27), with the original score (`video/score/`, the hybrid
+- Published: the v18 cut, https://youtu.be/Bl4_afw83Gc (1:30), which replaced the v17 cut (https://youtu.be/q2_qIRchqYs, 1:37). v18 tells the story first: the mistake frozen before the touch, the coach's questions, the same moment re-run without the scan, rewound, then played with it. Its score is composed to this cut (`video/score/cues/v18.json`, the hybrid
   variant). Its beats are in `video/trailer.json`; the sections above describe the earlier cuts.
 - The app shots are filmed from the live site after #161 (the offside fix), with the service's
   cached model narration. Its narration no longer says how far off his picture of H9 was, so

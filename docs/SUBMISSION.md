@@ -308,7 +308,7 @@ No login, free, live until 2026-11-10.
 - Model-backed breakdowns are rate-limited per visitor and capped per day. Past that, the
   service serves the cache or the deterministic template, so the demo keeps working.
 - **Code:** https://github.com/timothyzhbw-jpg/through-their-eyes (public, MIT).
-- **Video:** https://youtu.be/q2_qIRchqYs (1:37, public on YouTube, captions burned in).
+- **Video:** https://youtu.be/Bl4_afw83Gc (1:30, public on YouTube, captions burned in).
 
 ## Team
 

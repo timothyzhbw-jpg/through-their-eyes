@@ -19,7 +19,7 @@ match recap, the Tactics lab, five audiences, and English and Chinese.
 
 ### [▶ Try the live app](https://ttesite1ff906.z14.web.core.windows.net) · free, no login, a synthetic match with fictional players
 
-**[▶ Watch the video](https://youtu.be/q2_qIRchqYs)** (1:37, captions burned in)
+**[▶ Watch the video](https://youtu.be/Bl4_afw83Gc)** (1:30, captions burned in)
 
 **Who pays, and what a moment costs.** Broadcasters, for a "through his eyes" studio segment whose
 overlays arrive as timecoded cues for their graphics engine; clubs and academies, to review and

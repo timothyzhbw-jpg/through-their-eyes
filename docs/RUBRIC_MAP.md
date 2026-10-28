@@ -10,7 +10,7 @@ less than the claim.
 
 - **Live app:** https://ttesite1ff906.z14.web.core.windows.net (no login). Each deep link opens it
   at a spot; the parameters are in [web/README.md](../web/README.md#url-parameters).
-- **Video:** https://youtu.be/q2_qIRchqYs, the v17 cut (1:37, [NUMBERS](NUMBERS.md) D6), edited by code from
+- **Video:** https://youtu.be/Bl4_afw83Gc, the v18 cut (1:30, [NUMBERS](NUMBERS.md) D6), edited by code from
   [`video/trailer.json`](../video/trailer.json); [VIDEO_SCRIPT](VIDEO_SCRIPT.md) tells the earlier cuts.
 - **Numbers:** each number below is listed in [NUMBERS](NUMBERS.md) with the report or command
   that produces it.
@@ -99,7 +99,7 @@ communicates the project's value, and whether frontend and backend are balanced.
 | Well designed | A control to try a wrong number against the verifier | Evidence card **Try a wrong number** ([web/src/ui/Narration.tsx](../web/src/ui/Narration.tsx), [web/src/tamper/](../web/src/tamper/)) → `POST /api/verify` ([api/tamper.py](../api/tamper.py)): the real Verifier on the claim with the viewer's number, not audited; tests in [tests/test_api.py](../tests/test_api.py) and [web/src/tamper/tamper.test.tsx](../web/src/tamper/tamper.test.tsx). Live: [`?persona=analyst&tamper=cf_value`](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value) | ✅ |
 | Well designed | Accessible and fast on a phone | axe-core WCAG 2.2 A/AA on 13 screens at 1440×900 and 375×812, and in every CI smoke page ([ACCESSIBILITY](ACCESSIBILITY.md)); cold-load timings of the live site on laptop and phone, plain and on Fast 3G ([web_load](../eval/reports/web_load.md)) | ✅; nothing tested with a real screen reader |
 | Well designed | 60 fps on an integrated GPU with the pitch-control shader on | `cd web && npm run build && npm run fps -- --headed`; 60 fps capped on an Apple M4 Pro, headless (SPEC §7, 2026-10-21) | Partial: no run on a PC laptop's integrated GPU with the shader on |
-| The video | The demo video communicates the value | [https://youtu.be/q2_qIRchqYs](https://youtu.be/q2_qIRchqYs), the v17 cut: a staged story (labelled a dramatisation); the case, a match moment lost without the scan; the problem (no tool can re-run a moment that already happened) and the product in two cards; then that moment replayed through his eyes and re-run without the scan, the scan step-through, the coach's example, Your turn, the studio solutions and Value, the verifier; numbers only from verified claims; burned-in captions; [`video/trailer.json`](../video/trailer.json) | Yes |
+| The video | The demo video communicates the value | [https://youtu.be/Bl4_afw83Gc](https://youtu.be/Bl4_afw83Gc), the v18 cut: a staged story (labelled a dramatisation) frozen on the mistake before the touch and the coach's questions; then the same moment through his eyes, re-run without the scan, rewound and played with it; the scan step-through, the coach drill, Your turn, the studio solutions and Value, the crew and the verifier; the callback goal; an original score composed to the cut; numbers only from verified claims; burned-in captions; [`video/trailer.json`](../video/trailer.json) | Yes |
 | Balance | Frontend and backend | front: React, three.js and GLSL shaders in [web/](../web/) with its own test suite; back: the simulator, analytics, explain layer, the agent crew and the API in Python ([architecture](../README.md#architecture)); the two meet in typed schemas validated on both sides (`TelestrationPlan`, the claims) | ✅ |
 
 ## 5. Category adherence: Best Multi-Agent System
