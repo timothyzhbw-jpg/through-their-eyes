@@ -337,6 +337,10 @@ Nothing has been run on real tracking data. Each row says which kind of result i
   deployed service). Its inputs are synthetic, but what it measures is the software a customer
   would run.
 
+[![Eight held-out seeds of the hero scenario: H8's key scan as a cone, his pass with it in gold and, re-simulated without it, dashed](docs/hero-seeds.png)](eval/reports/hero_flip_blind_side_run.md)
+
+<sub>Not one cherry-picked moment: the same scenario on every fifth held-out seed, with H8's key scan and without it, drawn by [eval/seed_gallery.py](eval/seed_gallery.py). Over all held-out seeds, <!--num:H1-->33 of 40<!--/num--> decide differently ([hero_flip](eval/reports/hero_flip_blind_side_run.md)).</sub>
+
 | Claim | Kind | Number | Report |
 |---|---|---|---|
 | Without one look, the hero decides differently | Inside the sim | <!--num:H1-->33/40<!--/num--> seeds | [hero_flip](eval/reports/hero_flip_blind_side_run.md) |
