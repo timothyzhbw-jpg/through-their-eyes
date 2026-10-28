@@ -163,7 +163,7 @@ export const TERMS: readonly GlossaryTerm[] = [
   },
   {
     id: "scan",
-    label: { en: "Scan", zh: "扭头观察" },
+    label: { en: "Scan", zh: "回头观察" },
     aliases: {
       en: ["scan", "scans", "scanned", "scanning"],
       zh: ["扭头观察", "回头观察", "观察身后"],
@@ -187,7 +187,7 @@ export const TERMS: readonly GlossaryTerm[] = [
   },
   {
     id: "blind-side",
-    label: { en: "Blind side", zh: "盲侧" },
+    label: { en: "Blind side", zh: "视野盲区" },
     aliases: { en: ["blind side", "blind-side"], zh: ["盲侧", "视野盲区", "身后盲区"] },
     definition: {
       en: "The area behind or outside a player's view, where an opponent can move unseen.",
@@ -200,7 +200,7 @@ export const TERMS: readonly GlossaryTerm[] = [
     aliases: { en: ["overload", "overloads"], zh: ["局部人数优势", "人数优势"] },
     definition: {
       en: "More players than the opponent in one area, creating a spare player.",
-      zh: "在局部区域集中比防守方更多的球员，形成空出来的接应点。",
+      zh: "在局部区域集中比防守方更多的球员，形成无人盯防的接应点。",
     },
   },
   {

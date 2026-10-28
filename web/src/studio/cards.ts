@@ -111,7 +111,7 @@ const STATS: readonly StatTemplate[] = [
     needsRunner: true,
     label: {
       en: (_h, r) => `${r} opened up on his marker`,
-      zh: () => "与盯防球员拉开的身位",
+      zh: (_h, r) => `${r}与盯防球员拉开的距离`,
     },
   },
   {
@@ -119,14 +119,14 @@ const STATS: readonly StatTemplate[] = [
     key: "share",
     decimals: 0,
     unit: { en: "%", zh: "%" },
-    label: { en: () => "of the opponents' space he saw", zh: () => "他看到的对手控制空间占比" },
+    label: { en: () => "of the opponents' space he saw", zh: () => "他视野覆盖的对手控制区域" },
   },
   {
     claim: "pass_speed",
     key: "kmh",
     decimals: 1,
     unit: { en: " km/h", zh: "公里/小时" },
-    label: { en: () => "pass speed", zh: () => "传球时速" },
+    label: { en: () => "pass speed", zh: () => "传球球速" },
   },
 ];
 
@@ -139,7 +139,7 @@ const COPY = {
   },
   zh: {
     kicker: "他的视角",
-    title: (hero: string) => `以${hero}的视角看`,
+    title: (hero: string) => `从${hero}的视角看`,
     empty: "这一刻没有可展示的已验证数据。",
     footer: (home: string, away: string) => `${home}对${away}，模拟比赛`,
   },

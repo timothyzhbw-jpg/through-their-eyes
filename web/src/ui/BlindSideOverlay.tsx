@@ -27,7 +27,7 @@ export function StageBlindSideKey() {
   return (
     <p className="blind-side-key">
       <i style={{ background: ALERT_COLOR }} aria-hidden="true" />
-      Blind side: an opponent closing in that he has not seen
+      Blind side: a player on the move he has not seen
     </p>
   );
 }

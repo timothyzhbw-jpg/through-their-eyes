@@ -1,0 +1,35 @@
+/* Player cam and the Auto director beside the camera switch (ui/CameraExtras.tsx): chips with the
+   switch's dark glass under them, so they read over the picture. */
+.camera-extras {
+  flex: none;
+  display: flex;
+  gap: 6px;
+}
+.camera-extras .chip {
+  height: 44px;
+  padding: 0 12px;
+  white-space: nowrap;
+  background: rgba(8, 14, 11, 0.6);
+  backdrop-filter: blur(14px);
+}
+.camera-extras .chip:hover {
+  background: rgba(20, 28, 24, 0.72);
+}
+.camera-extras .chip[aria-pressed="true"] {
+  background:
+    linear-gradient(rgba(246, 213, 102, 0.14), rgba(246, 213, 102, 0.14)), rgba(8, 14, 11, 0.6);
+}
+/* From 1101 px the bar is one row: the timeline gives way first (down to its 200 px minimum), so
+   the pair does not wrap onto a second row over the picture in picture. */
+@media (min-width: 1101px) {
+  .transport:has(.camera-extras) .timeline {
+    flex-basis: 200px;
+  }
+}
+/* A phone has no row to spare under the picture (the card's primary action stays above the fold
+   at 390 × 844): both stay in View options → Camera there. */
+@media (max-width: 760px) {
+  .transport .camera-extras {
+    display: none;
+  }
+}

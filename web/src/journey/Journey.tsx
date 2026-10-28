@@ -359,6 +359,30 @@ export function ComparePanel() {
           </article>
         )}
       </div>
+      {hero.counterfactual && hero.keyScan && hero.scenario === "blind_side_run" && (
+        <details className="journey-seeds">
+          <summary>Not one cherry-picked moment: the same scenario on eight other seeds</summary>
+          <figure>
+            <a href={SEED_GALLERY} target="_blank" rel="noreferrer">
+              <img
+                src={SEED_GALLERY}
+                width="1600"
+                height="900"
+                loading="lazy"
+                alt="Eight boards of the same simulated scenario, each on another seed at his decision: his key scan as a gold cone, his pass with it as a gold arrow, and the same seconds re-simulated without it as a dashed arrow, or a dashed ring where he keeps the ball. On all but one of them, with the look he passes to the runner and without it he plays another pass or keeps the ball; on the third he makes the same pass either way. Synthetic players, fictional teams."
+              />
+            </a>
+            <figcaption className="note">
+              Every fifth held-out seed, at his decision: the look the comparison removes (gold
+              cone), his pass with it (gold) and the same seconds re-simulated without it (dashed).
+              Seeds where nothing changes are shown too.{" "}
+              <a href={SEED_REPORT_URL} target="_blank" rel="noreferrer">
+                Every seed, one by one
+              </a>
+            </figcaption>
+          </figure>
+        </details>
+      )}
       {!hero.counterfactual && (
         <p className="note">This moment has no re-simulated run to compare it with.</p>
       )}
@@ -392,18 +416,22 @@ function CompareSummary() {
     ? optionLabel(decision.chosen, personLookup(hero)).replace(/^./, (c) => c.toLowerCase())
     : null;
   const cost = line("look_cost")?.text;
-  const result = chosen ? `With it, ${chosen}.${cost ? ` ${cost}` : ""}` : null;
-  if (!look && !result) return null;
+  // In Chinese the checked lines say it all: no English clause is spliced onto them.
+  const zh = language === "zh" && !!data?.answers.zh && !!line(REMOVED_LOOK);
+  const summary = zh
+    ? { look: line(REMOVED_LOOK)!.text, result: cost ?? null }
+    : { look, result: chosen ? `With it, ${chosen}.${cost ? ` ${cost}` : ""}` : null };
+  if (!summary.look && !summary.result) return null;
   return (
-    <div className="journey-compare-summary" lang={language}>
-      {look && (
+    <div className="journey-compare-summary" lang={zh ? "zh" : "en"}>
+      {summary.look && (
         <p className="note">
-          <strong>The look:</strong> {look}
+          <strong>{zh ? "那一眼：" : "The look:"}</strong> {summary.look}
         </p>
       )}
-      {result && (
+      {summary.result && (
         <p className="note">
-          <strong>The result:</strong> {result}
+          <strong>{zh ? "结果：" : "The result:"}</strong> {summary.result}
         </p>
       )}
     </div>
@@ -420,13 +448,19 @@ function TheLook() {
   const line = narration?.lines.find((l) => l.id === REMOVED_LOOK);
   if (!line) return null;
   return (
-    <p className="journey-look" lang={language}>
+    <p className="journey-look" lang={data?.answers[language] ? language : "en"}>
       <LineText text={line.text} verified claims={lineClaims(narration!, line)} />
     </p>
   );
 }
 
 const REMOVED_LOOK = "removed_look"; // explain/look_cost.py: which look the comparison removes
+
+/** The blind-side run on eight held-out seeds, each board at his decision, with the look and
+ * without it (eval/seed_gallery.py's docs/hero-seeds.png, copied). */
+export const SEED_GALLERY = `${import.meta.env.BASE_URL}img/seeds/hero-seeds.png`;
+const SEED_REPORT_URL =
+  "https://github.com/timothyzhbw-jpg/through-their-eyes/blob/main/eval/reports/hero_flip_blind_side_run.md";
 
 // ---------- A · AI Tactical Broadcast ----------
 
@@ -526,6 +560,14 @@ const AUDIENCES: readonly { name: string; line: string }[] = [
   {
     name: "Player focus",
     line: "Follow one player: his moments first, ringed on the pitch and on the board.",
+  },
+  {
+    name: "Coach",
+    line: "His eyes with the board beside them: when he looked against the ball, what changed without the look, and what to teach from it.",
+  },
+  {
+    name: "Audio description",
+    line: "For blind and low-vision fans: where he got the ball, which way he looked and whom he saw, in calm, slower speech with no jargon.",
   },
   {
     name: "Multilingual",

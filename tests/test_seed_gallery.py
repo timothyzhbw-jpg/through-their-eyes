@@ -37,3 +37,9 @@ def test_every_panel_matches_its_row_in_the_hero_flip_report():
 def test_the_png_is_committed_beside_the_svg():
     assert PNG.stat().st_size > 50_000
     assert PNG.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_the_app_shows_the_same_png():
+    # The look's compare panel shows a copy (web/public/img/seeds); it must not drift from this one.
+    web = ROOT / "web" / "public" / "img" / "seeds" / "hero-seeds.png"
+    assert web.read_bytes() == PNG.read_bytes()

@@ -23,6 +23,7 @@ import { takeEyesOf } from "../takeeyes/controller";
 import { callLabel } from "../takeeyes/looks";
 import { isVerified, KindTags, LineText, lineClaims } from "../ui/Narration";
 import { Segmented } from "../ui/Segmented";
+import { ShareChallenge } from "../ui/ShareChallenge";
 import { PovView } from "../views/PovView";
 import { TacticalView } from "../views/TacticalView";
 import { LANGUAGES, type Language } from "../whatif/whatif";
@@ -596,6 +597,10 @@ function Card({ d, pickByKeyboard }: { d: Drill; pickByKeyboard: () => void }) {
             Next: {next.label}
           </a>
         )}
+        <ShareChallenge
+          action="?play=drill"
+          text="Train your scanning: where would you look before the ball arrives?"
+        />
         {back}
       </div>
     </aside>

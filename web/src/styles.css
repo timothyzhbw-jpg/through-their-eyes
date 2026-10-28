@@ -3300,6 +3300,31 @@ optgroup {
   color: var(--chalk-2);
   pointer-events: none;
 }
+/* On the stage the caption rises over the board's bottom edge (in the run without the look its
+   note is up the whole time: at 1440 x 900 only "Pass opti" of the key showed, on a phone they
+   were text on text, as with the one live stat). The key takes the top edge, or the band under
+   the pitch where the board is taller than the pitch (OptionsOverlay). It keeps the bottom edge
+   where the top one is taken: by the run switch's line on screens wider than 5:3 (it reaches over
+   the board's top there), and by the skeleton's key (keyCorner). */
+.slot.main .view.tac .options-legend {
+  top: 10px;
+  bottom: auto;
+}
+.slot.main .view.tac .options-legend.under-pitch {
+  top: calc(var(--pitch-bottom) + 6px);
+}
+@media (min-width: 1181px) and (min-aspect-ratio: 5 / 3) {
+  .slot.main .view.tac .options-legend:not(.under-pitch) {
+    top: auto;
+    bottom: 10px;
+  }
+}
+@media (min-width: 761px) {
+  .slot.main .view.tac:has(.skeleton-key) .options-legend:not(.under-pitch) {
+    top: auto;
+    bottom: 10px;
+  }
+}
 .blind-side-key {
   display: flex;
   align-items: flex-start;
@@ -3420,6 +3445,11 @@ optgroup {
 }
 .legend i.dashed {
   border: 1px dashed var(--chalk);
+}
+/* The landing and Your turn have no pitch: no pitch key (the landing has its own fictional note). */
+.app[data-door="home"] > .legend,
+.app[data-door="turn"] > .legend {
+  display: none;
 }
 
 /* ---------- a tablet: the bar wraps, the story keeps two columns ---------- */
@@ -4036,12 +4066,16 @@ optgroup {
   .stage-ticker .stat-chip:has(+ .stat-chip) {
     display: none;
   }
-  /* On the board the one live stat sits on its bottom edge, where the pass options' key is: the
-     key goes up a line while a stat shows (they were text on text). */
-  .stage.focus-tactical:not(:has(.stage-caption .caption-text)):has(.stage-ticker .stat-chip)
-    .view.tac
-    .options-legend {
-    bottom: 50px;
+}
+/* A phone's caption sits over the board's lower half (in the picture's grid area): it takes a
+   near-opaque plate so its lines read over the board's labels, and the blind-side tag, a chip on
+   the board that met the caption's chips, waits until the caption is down. Player labels stay. */
+@media (max-width: 760px) {
+  .stage-caption .caption:has(.caption-text) {
+    background: rgba(8, 14, 11, 0.88);
+  }
+  .stage:has(.stage-caption .caption-text) .blind-tag {
+    display: none;
   }
 }
 /* A small phone's picture is 240 px tall: with a caption up, his readouts keep to the alert. The

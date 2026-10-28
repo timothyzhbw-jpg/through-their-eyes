@@ -53,14 +53,24 @@ export const HOME_SHOT = {
 const plainClick = (e: MouseEvent<HTMLAnchorElement>) =>
   !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0);
 
-/** Door 1's story from the top: the quick tour where the moment has one, else the breakdown. */
+/** Door 1's story from the top: the quick tour where the moment has one, else the breakdown. It
+ * plays with sound: the tap turns the commentary voice on where the service speaks, unless the
+ * viewer has had it on and turned it off (the switch's `asked`), so a mute stays a mute. */
 function useWatch(): { label: string; title?: string; watch: () => void } {
   const session = useSession();
   const story = quickTourFits(envOf(session));
+  const speaks = session.api?.speaks() === true;
   return {
     label: story ? "Watch the look (60 s)" : "Watch it through his eyes",
-    title: story ? "His look, the run without it, the two compared: about a minute" : undefined,
+    title: story
+      ? `His look, the run without it, the two compared: about a minute${speaks ? ", with sound" : ""}`
+      : speaks
+        ? "With sound"
+        : undefined,
     watch: () => {
+      // Only where the service speaks (its health answer says so), or every line would fail.
+      const { on, asked } = session.voice.sound.get();
+      if (!on && !asked && speaks) session.controls.setSound(true); // in the tap
       openDoor("look", { address: true });
       window.scrollTo({ top: 0 });
       if (story) startTour(null, "quick");

@@ -8,7 +8,7 @@ import { render } from "../testing";
 import { StageBlindSideKey } from "./BlindSideOverlay";
 
 const hero = parseHero(raw);
-const TEXT = "Blind side: an opponent closing in that he has not seen";
+const TEXT = "Blind side: a player on the move he has not seen";
 
 describe("the blind-side line key", () => {
   it("appears with the broadcast and board lines, not without lines or in first person", () => {

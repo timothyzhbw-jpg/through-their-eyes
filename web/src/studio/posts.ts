@@ -203,7 +203,7 @@ const COPY: Record<
     tags: ["#ThroughTheirEyes"],
   },
   zh: {
-    hook: (hero) => `以${hero}的视角看。`,
+    hook: (hero) => `从${hero}的视角看。`,
     versus: (home, away) => `${home}对${away}，一场模拟比赛。`,
     synthetic: "模拟比赛：由数据重新推演，并非真实画面。",
     swipe: "左滑，看他当时看到了什么：",

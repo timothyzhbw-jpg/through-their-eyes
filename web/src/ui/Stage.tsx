@@ -33,6 +33,7 @@ import { directorPrefs } from "../director/director";
 import { directorOf, useSuggestion } from "../director/DirectorBar";
 import { pitchData, setPitchData } from "./pitchData";
 import { captionStoryPrefs, setCaptionStory } from "./captionStory";
+import { PlayerCam } from "./CameraExtras";
 
 export const BLURB: Record<string, string> = {
   blind_side_run:
@@ -491,6 +492,7 @@ function CameraOptions() {
       <h3 className="kicker">Camera</h3>
       <PlayerPicker />
       <div className="chips">
+        <PlayerCam />
         <button
           type="button"
           className="chip"

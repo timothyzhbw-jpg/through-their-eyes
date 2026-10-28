@@ -125,7 +125,11 @@ export function Caption() {
   const verified = !!narration && !!line && isVerified(narration, line);
   return (
     <>
-      <p className="sr-only" aria-live={speaking ? "off" : "polite"}>
+      <p
+        className="sr-only"
+        aria-live={speaking ? "off" : "polite"}
+        lang={narration?.payload.language}
+      >
         {line ? renameIds(line.text) : null}
       </p>
       {narration && line && (
@@ -140,7 +144,7 @@ export function Caption() {
             {speaker && <span className="speaker">{speaker}</span>}
             <KindTags narration={narration} line={line} />
           </span>
-          <span className="caption-text">
+          <span className="caption-text" lang={narration.payload.language}>
             <LineText
               text={line.text}
               verified={verified}
@@ -153,6 +157,7 @@ export function Caption() {
                 className={
                   verified ? "caption-more caption-evidence check" : "caption-more caption-evidence"
                 }
+                lang="en"
                 aria-label="Open the evidence for this line"
                 aria-expanded={open === line.id}
                 onClick={() => controls.openLine(line.id)}
@@ -254,7 +259,7 @@ export function CaptionStory() {
                 className={line.id === lineId ? "caption-story-line now" : "caption-story-line"}
                 aria-current={line.id === lineId ? "true" : undefined}
               >
-                <span className="caption-story-text">
+                <span className="caption-story-text" lang={narration.payload.language}>
                   <LineText
                     text={line.text}
                     verified={verified}
@@ -268,6 +273,7 @@ export function CaptionStory() {
                           ? "caption-more caption-evidence check"
                           : "caption-more caption-evidence"
                       }
+                      lang="en"
                       aria-label="Open the evidence for this line"
                       aria-expanded={open === line.id}
                       onClick={() => controls.openLine(line.id)}

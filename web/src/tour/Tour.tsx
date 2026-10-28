@@ -403,7 +403,7 @@ function TourOverlay({ session }: { session: ViewSession }) {
             </p>
           </div>
         </div>
-        {step.say && !folded && session.kind === "hero" && <StepLines say={step.say} />}
+        {step.say && !folded && session.kind === "hero" && <StepLines say={step.say} speak />}
         {Act && !folded && (
           <div className="tour-act">
             <Act />

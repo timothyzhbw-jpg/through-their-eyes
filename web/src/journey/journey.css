@@ -149,6 +149,45 @@
 .journey-without .kicker {
   color: var(--dusk);
 }
+/* The same scenario on eight other seeds, folded under the compare until asked for. */
+.journey-seeds summary {
+  box-sizing: border-box;
+  width: fit-content;
+  min-height: 32px; /* a target, marker and all */
+  padding: 6px 0;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--chalk-2);
+  text-decoration: underline dotted var(--chalk-3);
+  text-underline-offset: 0.25em;
+}
+.journey-seeds summary:hover,
+.journey-seeds[open] summary {
+  color: var(--chalk);
+}
+.journey-seeds summary:focus-visible {
+  outline: 2px solid var(--floodlight);
+  outline-offset: 3px;
+}
+.journey-seeds figure {
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.journey-seeds img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-media);
+}
+.journey-seeds figcaption {
+  margin: 0;
+  max-width: 640px;
+}
+.journey-seeds a {
+  color: var(--floodlight);
+}
 .journey-stadium {
   width: 100%;
 }

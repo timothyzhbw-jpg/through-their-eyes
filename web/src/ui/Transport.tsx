@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { possessionAt } from "../match/match";
 import { useView } from "../session";
 import { useStore } from "../store/store";
+import { CameraExtras } from "./CameraExtras";
 import { PauseIcon, PlayIcon } from "./icons";
 import { intro } from "./intro";
 import { CameraSwitch, MATCH_SPEEDS, SPEEDS } from "./Stage";
@@ -82,6 +83,7 @@ export function Transport() {
         </div>
       )}
       <CameraSwitch />
+      <CameraExtras />
     </section>
   );
 }
