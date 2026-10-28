@@ -229,8 +229,8 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    refuted <!--num:A5-->90 of 90<!--/num--> perturbed claims, and wrongly rejected <!--num:A5b.rejected-->0<!--/num--> of <!--num:A5b.n-->468<!--/num--> true ones: a number off by one unit or by 20%, a swapped player, a
    wrong order ([corruption](eval/reports/corruption.md)). Every
    verdict behind what the service airs is in the [audit log](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/api/matches/blind_side_run-3/audit?limit=5).
-6. **Take an agent down, bring it back.** [Analyst · English](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&intro=0):
-   in the **Producer · failure drill** desk under **Behind the replay**, press **Take down** on
+6. **Take an agent down, bring it back.** [The failure drill](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=en&step=commentary)
+   (For studios → B · Commentary, **Behind the commentary: the AI crew**): press **Take down** on
    the Telestrator and run the crew. It fails as in an outage: the call and one retry raise, it
    airs its template plan, and the breakdown still plays. **Bring back** resumes the Agent
    Framework workflow from its checkpoint and re-runs the Telestrator and the step after it; its
@@ -264,8 +264,9 @@ match is a short corner (possession 14): a defender marks the striker where he b
 be, and its **Breakdown** is under **⋯ Settings → Moment** too.
 
 ## Try it
-- **Web app:** https://ttesite1ff906.z14.web.core.windows.net — the hero moment in first person and
-  on the tactical board, with and without the look, pass options, blind-side alerts, "What if…?".
+- **Web app:** https://ttesite1ff906.z14.web.core.windows.net — opens on the landing page, with The look,
+  Your turn and For studios one click away: the hero moment in first person and on the tactical
+  board, with and without the look, pass options, blind-side alerts, "What if…?".
 - **API:** https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/health
   - live replay: `wss://…/ws/matches/blind_side_run-3/live` (25 Hz frames, events, moments);
   - a verified breakdown (cached after the first request):
