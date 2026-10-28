@@ -241,8 +241,9 @@ players take a few seconds to load). URL parameters: [web/README.md](web/README.
    Each run counts against the rate limit; a drill lasts until the API's next restart or deploy.
 7. **A whole match, four hero moments, a camera director.** [The stitched match on the broadcast camera](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&camera=broadcast&at=751):
    19 possessions on one clock of about 13½ minutes, opened where the scan hero's possession
-   starts. Press **Play**. The chip above the views is the camera director: it suggests a camera and says
-   why, one tap switches, and **Auto director** cuts by itself. Under **⋯ Settings → Moment**, the
+   starts. Press **Play**. The camera director suggests a camera with a dot on it in the camera
+   switch and says why; one tap takes it, and **Auto director** (beside the switch, or in **⋯ Settings
+   → View options**) cuts by itself. Under **⋯ Settings → Moment**, the
    pressure hero has a **Breakdown** too: a centre-back under a high press, and the counterfactual
    forces him to keep the ball (**If he carried it**). He loses it in <!--num:H4-->40 of 40<!--/num--> fresh seeds
    ([pressure](eval/reports/hero_lens_press_escape.md)). The shot hero and corner also open their
