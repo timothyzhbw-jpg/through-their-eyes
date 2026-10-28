@@ -28,7 +28,7 @@ languages (we ship English and Chinese) and audio description for blind and low-
 One explained moment in four scripts costs about $0.01 in model calls, and a re-watch costs no
 model call (breakdowns are cached), so a licence is priced by the tracking feed, hosting and
 editorial review, not by the model. These are hypotheses: no customer has seen it yet
-([business model](#business-model), [who uses it](#who-uses-it)).
+([four products](#one-engine-four-products), [business model](#business-model), [who uses it](#who-uses-it)).
 
 **Category: Best Multi-Agent System.** The crew in 30 seconds ([full answer](#best-multi-agent-system), each judging criterion in [RUBRIC_MAP](docs/RUBRIC_MAP.md)):
 - Four model agents on Microsoft Agent Framework (Director; Analyst, calling our MCP tool server; Telestrator; narration in two voices) and two code steps (Verifier, Voice), joined by typed handoffs, a rewrite loop and checkpoints.
@@ -154,7 +154,10 @@ rejected: [corruption](eval/reports/corruption.md)).
   25 fps (`GET /api/recaps/<key>/cues`, [agents/recap.py](agents/recap.py)).
 - **Controls.** Code checks every number the crew says or captions before it airs; every verdict
   goes to an audit log (Cosmos DB, `GET /api/matches/<id>/audit`); model calls are rate-limited
-  per client and capped per day, with deterministic templates and a cache behind them.
+  per client and capped per day, with deterministic templates and a cache behind them. The models
+  never write a number, in digits or in words: they pick verified claims and code fills in the
+  values ([explain/render.py](explain/render.py), [explain/numbers.py](explain/numbers.py)). There is no editor
+  sign-off step yet.
 - **Validated, and not.** The perception parameters are calibrated to published values: <!--num:R3.inside-->11<!--/num--> of 16
   checkable statistics fall inside the published range ([realism](eval/reports/realism.md)).
   Everything else, the hero results and every counterfactual included, holds inside our simulator
@@ -162,15 +165,28 @@ rejected: [corruption](eval/reports/corruption.md)).
 - **Business model.** Who would pay and for what, what one explained moment costs us to serve
   (about a cent of model calls), and what is still missing: [Business model](#business-model).
 
+## One engine, four products
+The **Belief Engine** is our simulator's perception model (scans → field of view → what he
+believed → his decision), the same seconds re-run without one look, and a Verifier that checks
+every number in code. Four products run on it in the live demo today, on synthetic matches;
+none has a customer yet ([business model](#business-model)).
+
+| Product | For | Live today | Not yet |
+|---|---|---|---|
+| **Studio Segment** | broadcasters' studio shows and alternate streams | [his look](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0), [without it](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical), a presenter's [What if…?](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F) re-simulated, the [full-time recap](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&play=recap) with its timecoded cue sheet | no graphics engine has rendered the cues; no half-time recap |
+| **Fan Explainer** | the league's fan apps | five audiences, each with its own lines, camera and voice, in English or Chinese, [audio description](https://ttesite1ff906.z14.web.core.windows.net/?persona=audio_description&intro=0) included; follow a club or a player; [highlights](https://ttesite1ff906.z14.web.core.windows.net/?step=highlights) as posts and 9:16 cards; [Make his call](https://ttesite1ff906.z14.web.core.windows.net/?play=yourcall) | two languages; one audience at a time |
+| **Scan Coach** | club video sessions and academies | the [coach's breakdown](https://ttesite1ff906.z14.web.core.windows.net/?persona=coach&intro=0), [the coach's example](https://ttesite1ff906.z14.web.core.windows.net/?play=steps&match=pro_scan-116) look by look, the [drill](https://ttesite1ff906.z14.web.core.windows.net/?play=drill) at two speeds | the club's own tracking: the [keypoint adapter](analytics/keypoints.py) is built, not wired |
+| **Verified Feed** | graphics, standards and app teams | `POST /api/verify`, the audit log (`GET /api/matches/<id>/audit`), cue sheets (`GET /api/recaps/<key>/cues`), the [OpenAPI reference](https://tte-api.whiteground-bd319324.northcentralus.azurecontainerapps.io/docs), our MCP tools | checks our own claims only; no editor sign-off step; the MCP server runs over stdio inside the service, with no public endpoint |
+
 ## Who uses it
 ![A storyboard of four real frames from the live app. 1, Saturday half-time, the studio: the first-person view at the key scan, with the KEY SCAN tag and a checked caption. 2, Saturday, the producer's desk: the failure drill panel, the Telestrator down on its template with a Bring back button while the other agents run. 3, Monday, the academy: the drill in first person, the ball arriving, asking where to look. 4, Any day, a fan's phone: the replay on two phones, the analyst in Chinese and the audio description view.](docs/matchday-storyboard.jpg)
 
 A matchday as we picture it. No broadcaster, club or app uses it yet, and every link below runs on
 our synthetic match:
 
-1. **Saturday, half-time, the studio.** The stream has flagged the moment the midfielder's pass opened the game. The analyst calls it up: his looks in the seconds before the ball, the runner appearing on one of them, then the same seconds re-run without that look, where he plays it back instead. A graphics engine could draw it from the moment's timed plan ([agents/schemas.py](agents/schemas.py); at full time the recap adds a timecoded cue sheet, [agents/recap.py](agents/recap.py)), and every number in its captions and narration was checked by code before it aired. Today a replay or a vision cone shows what he could have seen, not where he looked or what he believed. [First person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0) · [without the look](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical)
+1. **Saturday, half-time, the studio.** The stream has flagged the moment the midfielder's pass opened the game. The analyst calls it up: his looks in the seconds before the ball, the runner appearing on one of them, then the same seconds re-run without that look, where he plays it back instead. A graphics engine could draw it from the moment's timed plan ([agents/schemas.py](agents/schemas.py); at full time the recap adds a timecoded cue sheet, [agents/recap.py](agents/recap.py)), and every number in its captions and narration was checked by code before it aired. Today a replay or a vision cone shows what he could have seen, not where he looked or what he believed. [First person at the key scan](https://ttesite1ff906.z14.web.core.windows.net/?view=pov&at=key-scan&intro=0) · [without the look](https://ttesite1ff906.z14.web.core.windows.net/?run=counterfactual&at=decision&view=tactical) · [What if…?](https://ttesite1ff906.z14.web.core.windows.net/?ask=What+if+he+had+kept+the+ball+and+dribbled+forward%3F) · [full-time recap](https://ttesite1ff906.z14.web.core.windows.net/?match=match-1&play=recap)
 2. **Saturday, the producer's desk.** An agent fails mid-breakdown. Its lines air from the template instead of going silent, and **Bring back** resumes from the last checkpoint. A line the Verifier refutes goes back for a rewrite or is dropped, and every verdict on the crew's lines is in the audit log. [Failure drill](https://ttesite1ff906.z14.web.core.windows.net/?tour=producer) · [try a wrong number](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&tamper=cf_value) (a viewer's try is checked the same way, but not logged)
-3. **Monday, the academy video session.** The coach opens a moment for a U16 midfielder (on the club's own tracking, once it is connected). The player steps through his own looks, then the drill asks where he should have looked before the ball arrived and shows what that look would have caught. [Step through his looks](https://ttesite1ff906.z14.web.core.windows.net/?play=steps) · [academy drill](https://ttesite1ff906.z14.web.core.windows.net/?play=drill)
+3. **Monday, the academy video session.** The coach opens a moment for a U16 midfielder (on the club's own tracking, once it is connected). The player steps through his own looks, then the drill asks where he should have looked before the ball arrived and shows what that look would have caught. [Step through his looks](https://ttesite1ff906.z14.web.core.windows.net/?play=steps) · [coach's breakdown](https://ttesite1ff906.z14.web.core.windows.net/?persona=coach&intro=0) · [academy drill](https://ttesite1ff906.z14.web.core.windows.net/?play=drill)
 4. **On a phone, any day.** A fan taps the replay and hears it at their level, as a casual fan, analyst, player fan, coach or with audio description, in English or Chinese. A blind fan hears where he got the ball, which way he looked and whom he saw, in calm, slower speech ([ACCESSIBILITY](docs/ACCESSIBILITY.md)). [Audio description](https://ttesite1ff906.z14.web.core.windows.net/?persona=audio_description&intro=0) · [Analyst · 中文](https://ttesite1ff906.z14.web.core.windows.net/?persona=analyst&lang=zh&intro=0)
 
 What the research does and does not show about scanning is in
